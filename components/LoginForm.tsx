@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Hammer, HardHat, Construction, ArrowLeft, Check, AlertCircle, ShieldCheck, ShieldAlert, Upload, Camera, FileText, Loader2, AlertTriangle, XCircle } from 'lucide-react';
+import { Hammer, HardHat, Construction, ArrowLeft, Check, AlertCircle, ShieldCheck, ShieldAlert, Upload, Camera, FileText, Loader2, AlertTriangle, XCircle, Search } from 'lucide-react';
 import { Button } from './Button';
 import { Input } from './Input';
 import { User } from '../types';
@@ -22,7 +22,7 @@ interface ToastMessage {
 }
 
 export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
-  const [view, setView] = useState<'login' | 'signup-select' | 'signup-boss-step1' | 'signup-boss-step2'>('login');
+  const [view, setView] = useState<'login' | 'signup-select' | 'signup-boss-step1' | 'signup-boss-step2' | 'signup-boss-step3'>('login');
   const [toast, setToast] = useState<ToastMessage | null>(null);
   
   // Login State
@@ -53,6 +53,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
   const [industry, setIndustry] = useState('');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Sign Up State - Step 3
+  const [zipCode, setZipCode] = useState('');
+  const [address, setAddress] = useState('');
+  const [detailAddress, setDetailAddress] = useState('');
 
   // Toast Timer
   useEffect(() => {
@@ -242,8 +247,26 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
       alert('사업자 인증을 완료해주세요.');
       return;
     }
-    alert('2단계 인증이 완료되었습니다. 다음 단계로 이동합니다.');
-    // Logic for Step 3 would go here
+    // Proceed to Step 3
+    setView('signup-boss-step3');
+  };
+
+  const handleAddressSearch = () => {
+    // Simulate address search for demo
+    // In production, this would open a postcode popup (e.g., Daum Postcode)
+    setZipCode('06164');
+    setAddress('서울 강남구 테헤란로 427');
+    setDetailAddress('');
+  };
+
+  const handleSignupStep3Submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!zipCode || !address || !detailAddress) {
+        alert('주소 정보를 모두 입력해주세요.');
+        return;
+    }
+    alert('회원가입이 완료되었습니다! (데모)');
+    setView('login');
   };
 
   const renderLoginView = () => (
@@ -635,6 +658,83 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
     </div>
   );
 
+  const renderBossSignupStep3 = () => (
+    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+      {/* Progress Bar */}
+      <div className="w-full">
+        <div className="flex justify-between mb-2">
+          <span className="text-sm font-bold text-blue-600">3단계 : 기타 정보</span>
+          <span className="text-xs text-slate-400">3단계 중 3단계</span>
+        </div>
+        <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden flex">
+          <div className="h-full w-1/3 bg-blue-600"></div>
+          <div className="h-full w-1/3 bg-blue-600"></div>
+          <div className="h-full w-1/3 bg-blue-600 rounded-full"></div>
+        </div>
+      </div>
+
+      <form onSubmit={handleSignupStep3Submit} className="space-y-6">
+        <div className="space-y-4">
+            <label className="block text-sm font-medium text-slate-700">사업체 주소</label>
+            <div className="flex gap-2">
+                <Input
+                    id="zip-code"
+                    label=""
+                    placeholder="우편번호"
+                    value={zipCode}
+                    readOnly
+                    className="w-32"
+                />
+                <Button 
+                    type="button" 
+                    variant="secondary" 
+                    className="h-[42px] whitespace-nowrap"
+                    onClick={handleAddressSearch}
+                >
+                    <Search className="h-4 w-4 mr-1" />
+                    주소 검색
+                </Button>
+            </div>
+            <Input
+                id="address"
+                label=""
+                placeholder="기본 주소"
+                value={address}
+                readOnly
+            />
+            <Input
+                id="detail-address"
+                label=""
+                placeholder="상세 주소를 입력해주세요"
+                value={detailAddress}
+                onChange={(e) => setDetailAddress(e.target.value)}
+            />
+        </div>
+
+        <div className="pt-4">
+          <Button
+            type="submit"
+            fullWidth
+            className="h-12 text-lg"
+          >
+            가입 완료
+          </Button>
+        </div>
+      </form>
+
+      <div className="flex justify-center pt-2">
+        <button 
+          type="button" 
+          onClick={() => setView('signup-boss-step2')}
+          className="flex items-center text-sm text-slate-500 hover:text-slate-900 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          이전 단계로 돌아가기
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
       
@@ -678,6 +778,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
               {view === 'signup-select' && '회원가입 유형을 선택하세요'}
               {view === 'signup-boss-step1' && '업체 등록을 시작합니다'}
               {view === 'signup-boss-step2' && '사업자 정보를 확인합니다'}
+              {view === 'signup-boss-step3' && '마지막 단계입니다'}
             </p>
           </div>
 
@@ -685,6 +786,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
           {view === 'signup-select' && renderSignupSelectView()}
           {view === 'signup-boss-step1' && renderBossSignupStep1()}
           {view === 'signup-boss-step2' && renderBossSignupStep2()}
+          {view === 'signup-boss-step3' && renderBossSignupStep3()}
 
           {/* Footer Section */}
           <div className="mt-6">
