@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Hammer, HardHat, Construction, ArrowLeft, Check, AlertCircle, ShieldCheck, ShieldAlert, Upload, Camera, FileText, Loader2 } from 'lucide-react';
+import { Hammer, HardHat, Construction, ArrowLeft, Check, AlertCircle, ShieldCheck, ShieldAlert, Upload, Camera, FileText, Loader2, AlertTriangle, XCircle } from 'lucide-react';
 import { Button } from './Button';
 import { Input } from './Input';
 import { User } from '../types';
 import { analyzePassword, hashPassword, PasswordStrength } from '../utils/security';
 import { extractBusinessInfo, validateBusinessWithNTS } from '../utils/businessCert';
+import { validateImageMiddleware } from '../utils/imageSecurity';
 
 interface LoginFormProps {
   onLogin: (user: User) => void;
@@ -15,8 +16,14 @@ interface LoginAttempt {
   lockUntil: number | null;
 }
 
+interface ToastMessage {
+  msg: string;
+  type: 'warning' | 'error';
+}
+
 export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
   const [view, setView] = useState<'login' | 'signup-select' | 'signup-boss-step1' | 'signup-boss-step2'>('login');
+  const [toast, setToast] = useState<ToastMessage | null>(null);
   
   // Login State
   const [id, setId] = useState('');
@@ -46,6 +53,16 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
   const [industry, setIndustry] = useState('');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Toast Timer
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => {
+        setToast(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   // Analyze password strength whenever input changes
   useEffect(() => {
@@ -151,6 +168,21 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // --- Security Middleware Check ---
+    const integrity = await validateImageMiddleware(file);
+
+    if (integrity.error) {
+      setToast({ msg: integrity.error, type: 'error' });
+      if (fileInputRef.current) fileInputRef.current.value = ''; // Reset input
+      return; // Block upload
+    }
+
+    if (integrity.warning) {
+      setToast({ msg: integrity.warning, type: 'warning' });
+      // Proceed but warn
+    }
+    // ---------------------------------
+
     setBusinessImage(file);
     setIsProcessingImage(true);
     setIsValidatingBusiness(true);
@@ -187,7 +219,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
       setOpenDate(info.start_dt);
       setIndustry(info.w_kind || '');
       
-      alert("사업자 정보와 대표자 신원이 확인되었습니다.");
+      // We don't alert here anymore if we want smoother flow, or successful toast?
+      // alert("사업자 정보와 대표자 신원이 확인되었습니다.");
 
     } catch (err: any) {
       console.error(err);
@@ -510,7 +543,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
                 ref={fileInputRef} 
                 className="hidden" 
                 accept="image/*" 
-                capture="environment" // Preference for rear camera on mobile
+                capture="environment" 
                 onChange={handleImageUpload}
                 disabled={isProcessingImage}
               />
@@ -604,6 +637,21 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+      
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`fixed top-5 left-1/2 transform -translate-x-1/2 z-50 px-5 py-3 rounded-full shadow-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-300 ${
+            toast.type === 'error' ? 'bg-zinc-800 text-white' : 'bg-zinc-800 text-white'
+        }`}>
+            {toast.type === 'error' ? (
+                <XCircle className="h-5 w-5 text-red-400" />
+            ) : (
+                <AlertTriangle className="h-5 w-5 text-yellow-400" />
+            )}
+            <span className="text-sm font-medium">{toast.msg}</span>
+        </div>
+      )}
+
       {/* Background Decoration */}
       <div className="absolute inset-0 z-0 opacity-5 pointer-events-none">
         <div className="absolute top-10 left-10 transform -rotate-12">
