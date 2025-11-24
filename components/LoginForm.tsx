@@ -1,11 +1,13 @@
+
 import React, { useState, useEffect, useRef } from 'react';
-import { Hammer, HardHat, Construction, ArrowLeft, Check, AlertCircle, ShieldCheck, ShieldAlert, Upload, Camera, FileText, Loader2, AlertTriangle, XCircle, Search } from 'lucide-react';
+import { Hammer, HardHat, Construction, ArrowLeft, Check, AlertCircle, ShieldCheck, ShieldAlert, Upload, Camera, FileText, Loader2, AlertTriangle, XCircle, Search, MapPin, X } from 'lucide-react';
 import { Button } from './Button';
 import { Input } from './Input';
 import { User } from '../types';
-import { analyzePassword, hashPassword, PasswordStrength } from '../utils/security';
+import { analyzePassword, hashPassword, verifyPassword, PasswordStrength } from '../utils/security';
 import { extractBusinessInfo, validateBusinessWithNTS } from '../utils/businessCert';
 import { validateImageMiddleware } from '../utils/imageSecurity';
+import { searchAddress, Juso } from '../utils/addressApi';
 
 interface LoginFormProps {
   onLogin: (user: User) => void;
@@ -21,6 +23,20 @@ interface ToastMessage {
   type: 'warning' | 'error';
 }
 
+// Temporary storage for registration flow
+interface RegistrationData {
+  email: string;
+  passwordHash: string;
+  passwordSalt: string;
+  name: string;
+  phone: string;
+  businessName?: string;
+  businessNumber?: string;
+  openDate?: string;
+  industry?: string;
+  address?: string;
+}
+
 export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
   const [view, setView] = useState<'login' | 'signup-select' | 'signup-boss-step1' | 'signup-boss-step2' | 'signup-boss-step3'>('login');
   const [toast, setToast] = useState<ToastMessage | null>(null);
@@ -31,6 +47,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loginAttempts, setLoginAttempts] = useState<Record<string, LoginAttempt>>({});
+
+  // Sign Up State - Temp Data
+  const [tempRegData, setTempRegData] = useState<Partial<RegistrationData>>({});
 
   // Sign Up State - Step 1
   const [signupEmail, setSignupEmail] = useState('');
@@ -58,6 +77,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
   const [zipCode, setZipCode] = useState('');
   const [address, setAddress] = useState('');
   const [detailAddress, setDetailAddress] = useState('');
+  
+  // Address Search Modal State
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [addressKeyword, setAddressKeyword] = useState('');
+  const [addressResults, setAddressResults] = useState<Juso[]>([]);
+  const [isSearchingAddress, setIsSearchingAddress] = useState(false);
 
   // Toast Timer
   useEffect(() => {
@@ -91,7 +116,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
     setIsLoading(true);
 
     // Simulate API delay
-    setTimeout(() => {
+    setTimeout(async () => {
       // Mock failure condition
       if (!id || !password) {
         setError('아이디와 비밀번호를 모두 입력해주세요.');
@@ -99,8 +124,35 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
         return;
       }
 
-      // Mock Authentication Logic
-      const isValidUser = id === 'admin' && password === 'password123!'; 
+      let isValidUser = false;
+      let userName = '';
+
+      // 1. Check Hardcoded Admin
+      if (id === 'admin' && password === 'password123!') {
+        isValidUser = true;
+        userName = '현장 관리자';
+      } 
+      // 2. Check Registered Users (LocalStorage)
+      else {
+        try {
+          const storedUsersJSON = localStorage.getItem('demo_users');
+          if (storedUsersJSON) {
+            const users = JSON.parse(storedUsersJSON);
+            const user = users[id];
+            
+            if (user) {
+              // Verify Password (Re-hash input with stored salt and compare)
+              const isMatch = await verifyPassword(password, user.passwordHash, user.passwordSalt);
+              if (isMatch) {
+                isValidUser = true;
+                userName = user.name;
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Local storage error", err);
+        }
+      }
 
       if (!isValidUser) {
         // Handle failed attempt
@@ -130,13 +182,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
       delete newAttempts[id];
       setLoginAttempts(newAttempts);
 
-      const mockUser: User = {
+      const loggedInUser: User = {
         id: id,
-        name: '현장 관리자',
-        role: 'admin'
+        name: userName,
+        role: id === 'admin' ? 'admin' : 'user'
       };
 
-      onLogin(mockUser);
+      onLogin(loggedInUser);
       setIsLoading(false);
     }, 1000);
   };
@@ -146,6 +198,17 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
       alert('유효한 이메일 형식이 아닙니다.');
       return;
     }
+    
+    // Check local storage for duplicates
+    const storedUsersJSON = localStorage.getItem('demo_users');
+    if (storedUsersJSON) {
+      const users = JSON.parse(storedUsersJSON);
+      if (users[signupEmail]) {
+        alert('이미 사용 중인 아이디입니다.');
+        return;
+      }
+    }
+
     setTimeout(() => {
       alert('사용 가능한 아이디(이메일)입니다.');
       setIsEmailChecked(true);
@@ -163,8 +226,18 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
       return;
     }
     
-    // Simulate Hashing just to show we use it, though we store it at final submit usually
-    await hashPassword(signupPw);
+    // Create Hash and Salt
+    const { hash, salt } = await hashPassword(signupPw);
+    
+    // Store temporarily
+    setTempRegData({
+      ...tempRegData,
+      email: signupEmail,
+      passwordHash: hash,
+      passwordSalt: salt,
+      name: signupName,
+      phone: signupPhone
+    });
     
     setView('signup-boss-step2');
   };
@@ -224,9 +297,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
       setOpenDate(info.start_dt);
       setIndustry(info.w_kind || '');
       
-      // We don't alert here anymore if we want smoother flow, or successful toast?
-      // alert("사업자 정보와 대표자 신원이 확인되었습니다.");
-
     } catch (err: any) {
       console.error(err);
       setError(err.message || "사업자 정보 확인 중 오류가 발생했습니다.");
@@ -247,17 +317,48 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
       alert('사업자 인증을 완료해주세요.');
       return;
     }
-    // Proceed to Step 3
+    
+    setTempRegData({
+      ...tempRegData,
+      businessName,
+      businessNumber,
+      openDate,
+      industry
+    });
+
     setView('signup-boss-step3');
   };
 
-  const handleAddressSearch = () => {
-    // Simulate address search for demo
-    // In production, this would open a postcode popup (e.g., Daum Postcode)
-    setZipCode('06164');
-    setAddress('서울 강남구 테헤란로 427');
-    setDetailAddress('');
+  // --- Address Search Logic ---
+  const handleOpenAddressModal = () => {
+    setIsAddressModalOpen(true);
+    setAddressKeyword('');
+    setAddressResults([]);
   };
+
+  const handleAddressSearchSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!addressKeyword) return;
+    
+    setIsSearchingAddress(true);
+    try {
+      const results = await searchAddress(addressKeyword);
+      setAddressResults(results);
+    } catch (err) {
+      console.error(err);
+      alert('주소 검색 중 오류가 발생했습니다.');
+    } finally {
+      setIsSearchingAddress(false);
+    }
+  };
+
+  const handleSelectAddress = (juso: Juso) => {
+    setZipCode(juso.zipNo);
+    setAddress(juso.roadAddr);
+    setDetailAddress(''); // Reset detail address for user input
+    setIsAddressModalOpen(false);
+  };
+  // ----------------------------
 
   const handleSignupStep3Submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -265,8 +366,50 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
         alert('주소 정보를 모두 입력해주세요.');
         return;
     }
-    alert('회원가입이 완료되었습니다! (데모)');
-    setView('login');
+
+    // Finalize Registration: Save to Local Storage (Demo DB)
+    const finalData = {
+      ...tempRegData,
+      address: `${address} ${detailAddress}`
+    };
+
+    try {
+      const storedUsersJSON = localStorage.getItem('demo_users');
+      const users = storedUsersJSON ? JSON.parse(storedUsersJSON) : {};
+      
+      // Save user with email as key
+      if (finalData.email) {
+        users[finalData.email] = finalData;
+        localStorage.setItem('demo_users', JSON.stringify(users));
+        
+        alert('회원가입이 완료되었습니다! 이제 로그인해주세요.');
+        
+        // Reset and go to login
+        resetForm();
+        setView('login');
+      }
+    } catch (err) {
+      console.error('Registration failed', err);
+      alert('회원가입 처리 중 오류가 발생했습니다.');
+    }
+  };
+
+  const resetForm = () => {
+    setSignupEmail('');
+    setSignupPw('');
+    setSignupName('');
+    setSignupPhone('');
+    setIsEmailChecked(false);
+    setPwStrength('invalid');
+    setTempRegData({});
+    setBusinessImage(null);
+    setBusinessName('');
+    setBusinessNumber('');
+    setOpenDate('');
+    setIndustry('');
+    setZipCode('');
+    setAddress('');
+    setDetailAddress('');
   };
 
   const renderLoginView = () => (
@@ -327,7 +470,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
         <div className="flex items-center gap-2">
           <button 
             type="button" 
-            onClick={() => setView('signup-select')}
+            onClick={() => {
+                resetForm();
+                setView('signup-select');
+            }}
             className="font-medium text-blue-600 hover:text-blue-500 transition-colors"
           >
             회원 가입
@@ -527,7 +673,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
       <div className="flex justify-center pt-2">
         <button 
           type="button" 
-          onClick={() => setView('signup-select')}
+          onClick={() => {
+              resetForm();
+              setView('signup-select');
+          }}
           className="flex items-center text-sm text-slate-500 hover:text-slate-900 transition-colors"
         >
           <ArrowLeft className="h-4 w-4 mr-1" />
@@ -689,7 +838,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
                     type="button" 
                     variant="secondary" 
                     className="h-[42px] whitespace-nowrap"
-                    onClick={handleAddressSearch}
+                    onClick={handleOpenAddressModal}
                 >
                     <Search className="h-4 w-4 mr-1" />
                     주소 검색
@@ -749,6 +898,70 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
                 <AlertTriangle className="h-5 w-5 text-yellow-400" />
             )}
             <span className="text-sm font-medium">{toast.msg}</span>
+        </div>
+      )}
+
+      {/* Address Search Modal */}
+      {isAddressModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={() => setIsAddressModalOpen(false)} />
+          <div className="relative bg-white rounded-lg shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+             <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+                  <MapPin className="h-5 w-5 text-blue-600" />
+                  주소 검색
+                </h3>
+                <button onClick={() => setIsAddressModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                  <X className="h-5 w-5" />
+                </button>
+             </div>
+             
+             <div className="p-4">
+                <form onSubmit={handleAddressSearchSubmit} className="flex gap-2 mb-4">
+                  <Input 
+                    id="addr-search" 
+                    label="" 
+                    placeholder="도로명 또는 지번 주소 (예: 판교역로, 테헤란로)" 
+                    value={addressKeyword}
+                    onChange={(e) => setAddressKeyword(e.target.value)}
+                    autoFocus
+                  />
+                  <Button type="submit" isLoading={isSearchingAddress} className="h-[42px]">
+                    검색
+                  </Button>
+                </form>
+
+                <div className="h-64 overflow-y-auto border border-slate-100 rounded-md bg-slate-50">
+                    {addressResults.length > 0 ? (
+                      <ul className="divide-y divide-slate-100">
+                        {addressResults.map((item, idx) => (
+                           <li 
+                             key={idx} 
+                             onClick={() => handleSelectAddress(item)}
+                             className="p-3 hover:bg-blue-50 cursor-pointer transition-colors bg-white"
+                           >
+                              <div className="flex items-start gap-2">
+                                 <span className="mt-1 px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-bold rounded">도로명</span>
+                                 <p className="text-sm font-medium text-slate-900">{item.roadAddr}</p>
+                              </div>
+                              <div className="flex items-start gap-2 mt-1">
+                                 <span className="mt-1 px-1.5 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-bold rounded">지번</span>
+                                 <p className="text-sm text-slate-500">{item.jibunAddr}</p>
+                              </div>
+                           </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className="h-full flex flex-col items-center justify-center text-slate-400">
+                         <Search className="h-8 w-8 mb-2 opacity-50" />
+                         <p className="text-sm">검색 결과가 없습니다</p>
+                         <p className="text-xs mt-1">도로명 또는 지번을 입력해주세요</p>
+                         <p className="text-xs mt-4 text-slate-300">Tip: '강남', '판교'로 검색해보세요 (데모)</p>
+                      </div>
+                    )}
+                </div>
+             </div>
+          </div>
         </div>
       )}
 
