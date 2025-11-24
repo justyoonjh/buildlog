@@ -1,4 +1,5 @@
 
+
 // Check for sequential characters (e.g., 'abc', '123')
 export const hasSequentialChars = (str: string): boolean => {
   if (str.length < 3) return false;
@@ -84,8 +85,11 @@ export const hashPassword = async (password: string): Promise<{ hash: string; sa
 export const verifyPassword = async (password: string, storedHash: string, storedSalt: string): Promise<boolean> => {
   const encoder = new TextEncoder();
   
-  // Convert stored hex salt back to Uint8Array
-  const saltBytes = new Uint8Array(storedSalt.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
+  // Safely parse stored hex salt back to Uint8Array
+  const match = storedSalt.match(/.{1,2}/g);
+  if (!match) return false;
+  
+  const saltBytes = new Uint8Array(match.map(byte => parseInt(byte, 16)));
 
   const keyMaterial = await crypto.subtle.importKey(
     "raw",

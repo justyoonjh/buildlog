@@ -194,25 +194,29 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
   };
 
   const handleDuplicateCheck = () => {
-    if (!signupEmail.includes('@')) {
+    if (!signupEmail || !signupEmail.includes('@')) {
       alert('유효한 이메일 형식이 아닙니다.');
       return;
     }
     
-    // Check local storage for duplicates
-    const storedUsersJSON = localStorage.getItem('demo_users');
-    if (storedUsersJSON) {
-      const users = JSON.parse(storedUsersJSON);
-      if (users[signupEmail]) {
-        alert('이미 사용 중인 아이디입니다.');
-        return;
+    // Check local storage for duplicates safely
+    try {
+      const storedUsersJSON = localStorage.getItem('demo_users');
+      if (storedUsersJSON) {
+        const users = JSON.parse(storedUsersJSON);
+        if (users[signupEmail]) {
+          alert('이미 사용 중인 아이디입니다.');
+          return;
+        }
       }
+    } catch (e) {
+      console.error("Duplicate check error", e);
     }
 
     setTimeout(() => {
       alert('사용 가능한 아이디(이메일)입니다.');
       setIsEmailChecked(true);
-    }, 500);
+    }, 300);
   };
 
   const handleSignupStep1Submit = async (e: React.FormEvent) => {
@@ -226,20 +230,25 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
       return;
     }
     
-    // Create Hash and Salt
-    const { hash, salt } = await hashPassword(signupPw);
-    
-    // Store temporarily
-    setTempRegData({
-      ...tempRegData,
-      email: signupEmail,
-      passwordHash: hash,
-      passwordSalt: salt,
-      name: signupName,
-      phone: signupPhone
-    });
-    
-    setView('signup-boss-step2');
+    try {
+      // Create Hash and Salt
+      const { hash, salt } = await hashPassword(signupPw);
+      
+      // Store temporarily
+      setTempRegData({
+        ...tempRegData,
+        email: signupEmail,
+        passwordHash: hash,
+        passwordSalt: salt,
+        name: signupName,
+        phone: signupPhone
+      });
+      
+      setView('signup-boss-step2');
+    } catch (err) {
+      console.error("Error during step 1 submit:", err);
+      alert("처리 중 오류가 발생했습니다. 다시 시도해주세요.");
+    }
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -551,18 +560,20 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
       <form onSubmit={handleSignupStep1Submit} className="space-y-5">
         <div className="space-y-1">
           <div className="flex gap-2 items-end">
-            <Input
-              id="signup-email"
-              label="아이디 (이메일)"
-              type="email"
-              placeholder="example@company.com"
-              value={signupEmail}
-              onChange={(e) => {
-                setSignupEmail(e.target.value);
-                setIsEmailChecked(false);
-              }}
-              required
-            />
+            <div className="flex-1">
+              <Input
+                id="signup-email"
+                label="아이디 (이메일)"
+                type="email"
+                placeholder="example@company.com"
+                value={signupEmail}
+                onChange={(e) => {
+                  setSignupEmail(e.target.value);
+                  setIsEmailChecked(false);
+                }}
+                required
+              />
+            </div>
             <Button 
               type="button" 
               variant="secondary" 
@@ -639,15 +650,17 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
 
         <div className="pt-2">
             <div className="flex gap-2 items-end">
-                <Input
-                id="signup-phone"
-                label="휴대폰 본인 인증"
-                type="tel"
-                placeholder="010-0000-0000"
-                value={signupPhone}
-                onChange={(e) => setSignupPhone(e.target.value)}
-                required
-                />
+                <div className="flex-1">
+                  <Input
+                  id="signup-phone"
+                  label="휴대폰 본인 인증"
+                  type="tel"
+                  placeholder="010-0000-0000"
+                  value={signupPhone}
+                  onChange={(e) => setSignupPhone(e.target.value)}
+                  required
+                  />
+                </div>
                 <Button 
                 type="button" 
                 variant="outline" 
