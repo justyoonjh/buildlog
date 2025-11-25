@@ -171,3 +171,16 @@ export const generateCompanyCode = (): string => {
   }
   return result;
 };
+
+// Error Logger System
+export const logSystemError = (code: string, details: string) => {
+  const timestamp = new Date().toISOString();
+  console.error(`[${timestamp}] System Error ${code}: ${details}`);
+  try {
+    const logs = JSON.parse(localStorage.getItem('error_logs') || '[]');
+    logs.push({ code, details, timestamp });
+    localStorage.setItem('error_logs', JSON.stringify(logs));
+  } catch (e) {
+    // Ignore storage errors
+  }
+};
