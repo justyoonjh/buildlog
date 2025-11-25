@@ -1,0 +1,25 @@
+{
+  "juhoyoon0901@naver.com": {
+    "id": "juhoyoon0901@naver.com",
+    "name": "권영민",
+    "role": "boss",
+    "companyName": "엘씨파워코리아 (주)",
+    "companyCode": "y4tkrvm1u2",
+    "businessNumber": "1088178306",
+    "phone": "010-8299-2804",
+    "businessInfo": {
+      "b_no": "1088178306",
+      "c_nm": "권영민",
+      "start_dt": "20070207",
+      "p_nm": "권영민"
+    },
+    "address": {
+      "zipCode": "34155",
+      "address": "대전광역시 유성구 동서대로 49 (덕명동)",
+      "detailAddress": "한밭대학교"
+    },
+    "passwordHash": "b89131fa7584ea5b8b2af2d731725d4ac6319b19eb9bd7de94908d98ccbb5b301706e61920c90156342a81b64c3e08a2b834fae2334b9bed62925a140e29020a",
+    "passwordSalt": "4f6f1e7c03c516604457f044d765afaa",
+    "createdAt": 1764092517005
+  }
+}

@@ -1,95 +1,198 @@
 /**
- * Juso API Proxy Server
+ * API Server & Proxy
  * 
- * This server handles requests from the frontend, appends the secure API Key,
- * and forwards the request to the Korean Road Name Address API.
- * This prevents CORS issues and exposes the API Key only on the server side.
- * 
- * To run:
- * 1. npm install express axios cors
- * 2. node server-proxy.js
+ * Handles:
+ * 1. Authentication (Register, Login) - Secure Server-Side Hashing
+ * 2. Juso API Proxy
+ * 3. NTS API Proxy
  */
 
-require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
+const crypto = require('crypto');
+const config = require('./server-config');
+const db = require('./server-db');
+
 const app = express();
 
-// Allow requests from your frontend domain
 app.use(cors());
 app.use(express.json());
 
-// SECURITY: Store this in an environment variable in production (e.g., process.env.JUSO_API_KEY)
-const JUSO_API_KEY = 'devU01TX0FVVEgyMDI1MTEyNTAwNDA1MTExNjQ4OTY=';
-const JUSO_API_URL = 'https://business.juso.go.kr/addrlink/addrLinkApi.do';
+// --- Helper: Password Hashing (PBKDF2) ---
+const hashPassword = (password) => {
+  return new Promise((resolve, reject) => {
+    const salt = crypto.randomBytes(16).toString('hex');
+    crypto.pbkdf2(password, salt, config.AUTH.SALT_ROUNDS, config.AUTH.KEY_LENGTH, config.AUTH.DIGEST, (err, derivedKey) => {
+      if (err) reject(err);
+      resolve({
+        salt,
+        hash: derivedKey.toString('hex')
+      });
+    });
+  });
+};
 
-app.get('/api/address/search', async (req, res) => {
+const verifyPassword = (password, storedHash, storedSalt) => {
+  return new Promise((resolve, reject) => {
+    crypto.pbkdf2(password, storedSalt, config.AUTH.SALT_ROUNDS, config.AUTH.KEY_LENGTH, config.AUTH.DIGEST, (err, derivedKey) => {
+      if (err) reject(err);
+      resolve(derivedKey.toString('hex') === storedHash);
+    });
+  });
+};
+
+// --- Auth Endpoints ---
+
+// Register
+app.post('/api/auth/register', async (req, res) => {
   try {
-    const { keyword, currentPage = 1, countPerPage = 10 } = req.query;
+    const { id, password, ...userData } = req.body;
 
-    if (!keyword) {
-      return res.status(400).json({ error: 'Keyword is required' });
+    if (!id || !password) {
+      return res.status(400).json({ error: 'ID and password are required' });
     }
 
-    const response = await axios.get(JUSO_API_URL, {
-      params: {
-        confmKey: JUSO_API_KEY,
-        currentPage: currentPage,
-        countPerPage: countPerPage,
-        keyword: keyword,
-        resultType: 'json' // Request JSON response
-      }
-    });
+    // Check duplicate
+    if (db.findUserById(id)) {
+      return res.status(409).json({ error: 'User already exists' });
+    }
 
-    // Check for API-level errors
-    if (response.data.results.common.errorCode !== '0') {
-      return res.status(400).json({
-        error: response.data.results.common.errorMessage
+    // Hash password on server
+    const { salt, hash } = await hashPassword(password);
+
+    const newUser = {
+      id,
+      ...userData,
+      passwordHash: hash,
+      passwordSalt: salt,
+      createdAt: Date.now()
+    };
+
+    db.saveUser(newUser);
+
+    // Return success (exclude secrets)
+    res.json({ success: true, message: 'User registered successfully' });
+  } catch (error) {
+    console.error('Register Error:', error);
+    res.status(500).json({ error: 'Registration failed' });
+  }
+});
+
+// Login
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { id, password } = req.body;
+
+    // Admin Backdoor (Legacy support if needed, or remove)
+    if (id === 'admin' && password === 'password123!') {
+      return res.json({
+        success: true,
+        user: { id: 'admin', name: '현장 관리자', role: 'admin' }
       });
     }
 
-    res.json(response.data);
+    const user = db.findUserById(id);
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
 
+    const isValid = await verifyPassword(password, user.passwordHash, user.passwordSalt);
+    if (!isValid) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    // Return user info (exclude secrets)
+    const { passwordHash, passwordSalt, ...safeUser } = user;
+    res.json({ success: true, user: safeUser });
+
+  } catch (error) {
+    console.error('Login Error:', error);
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+// Check Duplicate ID
+app.get('/api/auth/check-id', (req, res) => {
+  const { id } = req.query;
+  if (!id) return res.status(400).json({ error: 'ID is required' });
+
+  const exists = !!db.findUserById(id);
+  res.json({ exists });
+});
+
+// Verify Company Code (For Employee Signup)
+app.get('/api/auth/verify-code', (req, res) => {
+  const { code } = req.query;
+  if (!code) return res.status(400).json({ error: 'Code is required' });
+
+  const boss = db.findBossByCode(code);
+  if (boss) {
+    // Return minimal boss info needed for employee
+    res.json({
+      valid: true,
+      businessInfo: boss.businessInfo
+    });
+  } else {
+    res.json({ valid: false });
+  }
+});
+
+// Reset Data (Dev only)
+app.post('/api/auth/reset', (req, res) => {
+  try {
+    db.resetUsers();
+    res.json({ success: true, message: 'Database reset successfully' });
+  } catch (error) {
+    console.error('Reset Error:', error);
+    res.status(500).json({ error: 'Reset failed' });
+  }
+});
+
+
+// --- Juso API Proxy ---
+app.get('/api/address/search', async (req, res) => {
+  try {
+    const { keyword, currentPage = 1, countPerPage = 10 } = req.query;
+    if (!keyword) return res.status(400).json({ error: 'Keyword is required' });
+
+    const response = await axios.get(config.JUSO.API_URL, {
+      params: {
+        confmKey: config.JUSO.API_KEY,
+        currentPage,
+        countPerPage,
+        keyword,
+        resultType: 'json'
+      }
+    });
+
+    if (response.data.results.common.errorCode !== '0') {
+      return res.status(400).json({ error: response.data.results.common.errorMessage });
+    }
+    res.json(response.data);
   } catch (error) {
     console.error('Juso API Error:', error.message);
     res.status(500).json({ error: 'Failed to fetch address data' });
   }
 });
 
-// --- NTS API Proxy (국세청 사업자 진위확인 및 상태조회) ---
-
-// SECURITY: Store this in an environment variable in production
-const NTS_API_KEY = process.env.NTS_API_KEY || "eba26431906495f0fee56a259ec7e6071dbf531539f00be7cf604a65f492fcf5";
-
-// Helper to get the service key (handle encoding issues)
+// --- NTS API Proxy ---
 const getServiceKey = () => {
-  // If the key already contains '%', it's likely encoded.
-  // If not, we should encode it because it's being passed in the URL query string.
-  return NTS_API_KEY.includes('%') ? NTS_API_KEY : encodeURIComponent(NTS_API_KEY);
+  const key = config.NTS.API_KEY;
+  return key.includes('%') ? key : encodeURIComponent(key);
 };
 
-// 1. Status Inquiry (상태 조회)
 app.post('/api/nts/status', async (req, res) => {
   try {
     const serviceKey = getServiceKey();
-
-    console.log(`[NTS Status] Requesting: ${`https://api.odcloud.kr/api/nts-businessman/v1/status?serviceKey=${serviceKey.substring(0, 10)}...`}`);
-    console.log(`[NTS Status] Body:`, JSON.stringify(req.body));
-
     const response = await axios.post(
-      `https://api.odcloud.kr/api/nts-businessman/v1/status?serviceKey=${serviceKey}`,
+      `${config.NTS.STATUS_URL}?serviceKey=${serviceKey}`,
       req.body,
       { headers: { 'Content-Type': 'application/json' } }
     );
-    console.log(`[NTS Status] Success:`, response.data);
     res.json(response.data);
   } catch (error) {
     console.error('NTS Status API Error:', error.message);
-    if (error.response) {
-      console.error('Error Status:', error.response.status);
-      console.error('Error Data:', JSON.stringify(error.response.data));
-    }
     res.status(error.response?.status || 500).json({
       error: 'Failed to fetch business status',
       details: error.response?.data || error.message
@@ -97,21 +200,17 @@ app.post('/api/nts/status', async (req, res) => {
   }
 });
 
-// 2. Authenticity Verification (진위 확인)
 app.post('/api/nts/validate', async (req, res) => {
   try {
     const serviceKey = getServiceKey();
     const response = await axios.post(
-      `https://api.odcloud.kr/api/nts-businessman/v1/validate?serviceKey=${serviceKey}`,
+      `${config.NTS.VALIDATE_URL}?serviceKey=${serviceKey}`,
       req.body,
       { headers: { 'Content-Type': 'application/json' } }
     );
     res.json(response.data);
   } catch (error) {
     console.error('NTS Validate API Error:', error.message);
-    if (error.response) {
-      console.error('Error Details:', error.response.data);
-    }
     res.status(error.response?.status || 500).json({
       error: 'Failed to validate business info',
       details: error.response?.data || error.message
@@ -119,7 +218,9 @@ app.post('/api/nts/validate', async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`Address Proxy Server running on port ${PORT}`);
+app.listen(config.PORT, () => {
+  console.log(`Server running on port ${config.PORT}`);
+  console.log(`- Auth & DB: Active (File: ${config.DB.FILE_PATH})`);
+  console.log(`- Juso Proxy: Active`);
+  console.log(`- NTS Proxy: Active`);
 });

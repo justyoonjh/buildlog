@@ -106,18 +106,19 @@ export const EmployeeSignupForm: React.FC<EmployeeSignupFormProps> = ({ onCancel
       }
 
       // 2. Register
-      const { hash, salt } = await hashPassword(signupPw);
+      // const { hash, salt } = await hashPassword(signupPw); // Moved to server
 
       const newUser = {
         id: signupEmail,
+        password: signupPw, // Send plain password
         name: signupName,
         role: 'employee' as const,
         companyCode: inputCompanyCode,
         phone: signupPhone,
-        passwordHash: hash,
-        passwordSalt: salt,
+        // passwordHash: hash, // Removed
+        // passwordSalt: salt, // Removed
         businessInfo: boss.businessInfo, // Link to boss's business info
-        createdAt: Date.now()
+        // createdAt: Date.now() // Server handles this
       };
 
       const success = await mockAuthService.register(newUser);

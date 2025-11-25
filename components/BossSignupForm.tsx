@@ -168,20 +168,21 @@ export const BossSignupForm: React.FC<BossSignupFormProps> = ({ onCancel, onComp
     setIsLoading(true);
 
     try {
-      const { hash, salt } = await hashPassword(password);
+      // const { hash, salt } = await hashPassword(password); // Moved to server
       const newCompanyCode = generateCompanyCode();
 
-      // Use mockAuthService for registration
+      // Use mockAuthService for registration (Server handles hashing)
       const success = await mockAuthService.register({
         id: email,
-        name: ownerName, // Use ownerName from Step 2 as the user's name
+        password: password, // Send plain password to server
+        name: ownerName,
         role: 'boss',
         companyName,
         companyCode: newCompanyCode,
         businessNumber,
         phone,
-        passwordHash: hash,
-        passwordSalt: salt,
+        // passwordHash: hash, // Removed
+        // passwordSalt: salt, // Removed
         businessInfo: {
           b_no: businessNumber,
           c_nm: ownerName,
@@ -193,7 +194,7 @@ export const BossSignupForm: React.FC<BossSignupFormProps> = ({ onCancel, onComp
           address,
           detailAddress
         },
-        createdAt: Date.now()
+        // createdAt: Date.now() // Server handles this
       });
 
       if (success) {

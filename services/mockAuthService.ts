@@ -1,90 +1,88 @@
 import { User } from '../types';
-import { verifyPassword } from '../utils/security';
 
-// Define the shape of the user stored in DB (includes secrets)
-interface StoredUser extends User {
-  passwordHash: string;
-  passwordSalt: string;
-}
-
-const STORAGE_KEY = 'demo_users';
+const API_URL = 'http://localhost:3001/api/auth';
 
 export const mockAuthService = {
-  // Simulate finding a user by ID
-  async findUserById(id: string): Promise<StoredUser | null> {
+  // Check if ID exists
+  async findUserById(id: string): Promise<User | null> {
     try {
-      const storedUsersJSON = localStorage.getItem(STORAGE_KEY);
-      if (!storedUsersJSON) return null;
-      const users = JSON.parse(storedUsersJSON);
-      return users[id.toLowerCase()] || null;
-    } catch (error) {
-      console.error('Mock DB Error:', error);
-      return null;
-    }
-  },
-
-  // Find boss by company code
-  async findBossByCompanyCode(code: string): Promise<StoredUser | null> {
-    try {
-      const storedUsersJSON = localStorage.getItem(STORAGE_KEY);
-      if (!storedUsersJSON) return null;
-      const users = JSON.parse(storedUsersJSON);
-
-      // Iterate to find a boss with this code
-      for (const key in users) {
-        const user = users[key];
-        if (user.role === 'boss' && user.companyCode === code) {
-          return user;
-        }
+      const res = await fetch(`${API_URL}/check-id?id=${encodeURIComponent(id)}`);
+      const data = await res.json();
+      // Note: This endpoint currently only returns { exists: boolean }
+      // To fully mimic previous behavior, we might need a full user fetch, 
+      // but for "duplicate check" this is enough.
+      // However, the UI expects a User object sometimes.
+      // Let's assume for duplicate check we just need existence.
+      // BUT, login uses this? No, login has its own endpoint.
+      // Duplicate check uses this. 
+      if (data.exists) {
+        return { id, name: 'Unknown', role: 'employee' } as User; // Dummy return for existence check
       }
       return null;
     } catch (error) {
-      console.error('Mock DB Error:', error);
+      console.error('API Error:', error);
       return null;
     }
   },
 
-  // Simulate Login: Verifies password and returns SAFE user object (no secrets)
+  // Find boss by company code (for employee signup)
+  async findBossByCompanyCode(code: string): Promise<{ businessInfo: any } | null> {
+    try {
+      const res = await fetch(`${API_URL}/verify-code?code=${encodeURIComponent(code)}`);
+      const data = await res.json();
+      if (data.valid) {
+        return { businessInfo: data.businessInfo };
+      }
+      return null;
+    } catch (error) {
+      console.error('API Error:', error);
+      return null;
+    }
+  },
+
+  // Login
   async login(id: string, password: string): Promise<User | null> {
-    // 1. Hardcoded Admin Check
-    if (id === 'admin' && password === 'password123!') {
-      return { id: 'admin', name: '현장 관리자', role: 'admin' };
+    try {
+      const res = await fetch(`${API_URL}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, password })
+      });
+
+      if (!res.ok) return null;
+
+      const data = await res.json();
+      return data.user;
+    } catch (error) {
+      console.error('Login Error:', error);
+      return null;
     }
-
-    // 2. DB Check
-    const user = await this.findUserById(id);
-    if (!user) return null;
-
-    const isValid = await verifyPassword(password, user.passwordHash, user.passwordSalt);
-    if (!isValid) return null;
-
-    // Return user without secrets
-    const { passwordHash, passwordSalt, ...safeUser } = user;
-    return safeUser;
   },
 
-  // Simulate Registration
-  async register(user: StoredUser): Promise<boolean> {
+  // Register (Now accepts plain password)
+  async register(userData: any): Promise<boolean> {
     try {
-      const storedUsersJSON = localStorage.getItem(STORAGE_KEY) || '{}';
-      const users = JSON.parse(storedUsersJSON);
+      const res = await fetch(`${API_URL}/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData)
+      });
 
-      if (users[user.id.toLowerCase()]) {
-        throw new Error('이미 존재하는 아이디입니다.');
-      }
-
-      users[user.id.toLowerCase()] = user;
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
-      return true;
+      return res.ok;
     } catch (error) {
       console.error('Registration Error:', error);
       return false;
     }
   },
 
-  // Reset Data
-  resetData() {
-    localStorage.removeItem(STORAGE_KEY);
-    window.location.reload();
+  // Reset Data (Call server to clear DB)
+  async resetData() {
+    try {
+      await fetch(`${API_URL}/reset`, { method: 'POST' });
+      window.location.reload();
+    } catch (error) {
+      console.error('Reset Failed:', error);
+      alert('데이터 초기화 실패');
+    }
   }
 };
