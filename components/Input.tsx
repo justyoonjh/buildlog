@@ -18,9 +18,11 @@ export const Input: React.FC<InputProps> = ({ label, error, id, className = '', 
 
   return (
     <div className="w-full">
-      <label htmlFor={id} className="block text-sm font-medium text-slate-700 mb-1">
-        {label}
-      </label>
+      {label && (
+        <label htmlFor={id} className="block text-sm font-medium text-slate-700 mb-1">
+          {label}
+        </label>
+      )}
       <div className="relative">
         <input
           id={id}

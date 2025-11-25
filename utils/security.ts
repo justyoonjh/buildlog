@@ -1,5 +1,4 @@
 
-
 // Check for sequential characters (e.g., 'abc', '123')
 export const hasSequentialChars = (str: string): boolean => {
   if (str.length < 3) return false;
@@ -12,7 +11,7 @@ export const hasSequentialChars = (str: string): boolean => {
     // Check increasing sequence (e.g., abc, 123)
     if (code2 === code1 + 1 && code3 === code2 + 1) return true;
     
-    // Check decreasing sequence (e.g., cba, 321) if needed, but prompt usually implies simple sequences
+    // Check decreasing sequence (e.g., cba, 321) if needed
     // if (code2 === code1 - 1 && code3 === code2 - 1) return true;
   }
   return false;
@@ -48,72 +47,127 @@ export const analyzePassword = (password: string, email: string): PasswordStreng
   return 'normal';
 };
 
-// Simulate PBKDF2 Hashing
+// Simulate PBKDF2 Hashing with Fallback for Non-Secure Contexts (Fixing Error B)
 export const hashPassword = async (password: string): Promise<{ hash: string; salt: string }> => {
-  const encoder = new TextEncoder();
-  const saltBytes = crypto.getRandomValues(new Uint8Array(16));
-  const salt = Array.from(saltBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+  try {
+    if (window.crypto && window.crypto.subtle) {
+      const encoder = new TextEncoder();
+      const saltBytes = crypto.getRandomValues(new Uint8Array(16));
+      const salt = Array.from(saltBytes).map(b => b.toString(16).padStart(2, '0')).join('');
 
-  const keyMaterial = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(password),
-    { name: "PBKDF2" },
-    false,
-    ["deriveBits", "deriveKey"]
-  );
+      const keyMaterial = await crypto.subtle.importKey(
+        "raw",
+        encoder.encode(password),
+        { name: "PBKDF2" },
+        false,
+        ["deriveBits", "deriveKey"]
+      );
 
-  const key = await crypto.subtle.deriveKey(
-    {
-      name: "PBKDF2",
-      salt: saltBytes,
-      iterations: 100000,
-      hash: "SHA-256"
-    },
-    keyMaterial,
-    { name: "AES-GCM", length: 256 },
-    true,
-    ["encrypt", "decrypt"]
-  );
+      const key = await crypto.subtle.deriveKey(
+        {
+          name: "PBKDF2",
+          salt: saltBytes,
+          iterations: 100000,
+          hash: "SHA-256"
+        },
+        keyMaterial,
+        { name: "AES-GCM", length: 256 },
+        true,
+        ["encrypt", "decrypt"]
+      );
 
-  const exported = await crypto.subtle.exportKey("raw", key);
-  const hash = Array.from(new Uint8Array(exported)).map(b => b.toString(16).padStart(2, '0')).join('');
+      const exported = await crypto.subtle.exportKey("raw", key);
+      const hash = Array.from(new Uint8Array(exported)).map(b => b.toString(16).padStart(2, '0')).join('');
 
-  return { hash, salt };
+      return { hash, salt };
+    }
+  } catch (e) {
+    console.warn("Secure hashing failed, falling back to demo hashing.", e);
+  }
+
+  // --- Fallback for Insecure Contexts (Error B Solution) ---
+  // This ensures the app doesn't crash on http:// or non-localhost
+  console.log("Using Fallback (Demo) Hashing");
+  const fallbackSalt = Math.random().toString(36).substring(2, 15);
+  // Simple pseudo-hash for demo only: Base64(password + salt)
+  const fallbackHash = btoa(password + fallbackSalt); 
+  return { hash: `DEMO:${fallbackHash}`, salt: fallbackSalt };
 };
 
-// Verify Password
+// Verify Password with support for both Secure and Fallback hashes
 export const verifyPassword = async (password: string, storedHash: string, storedSalt: string): Promise<boolean> => {
-  const encoder = new TextEncoder();
-  
-  // Safely parse stored hex salt back to Uint8Array
-  const match = storedSalt.match(/.{1,2}/g);
-  if (!match) return false;
-  
-  const saltBytes = new Uint8Array(match.map(byte => parseInt(byte, 16)));
+  if (!password || !storedHash || !storedSalt) return false;
 
-  const keyMaterial = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(password),
-    { name: "PBKDF2" },
-    false,
-    ["deriveBits", "deriveKey"]
-  );
+  // 1. Check if it's a Fallback Hash
+  if (storedHash.startsWith('DEMO:')) {
+    const computedFallback = btoa(password + storedSalt);
+    return storedHash === `DEMO:${computedFallback}`;
+  }
 
-  const key = await crypto.subtle.deriveKey(
-    {
-      name: "PBKDF2",
-      salt: saltBytes,
-      iterations: 100000,
-      hash: "SHA-256"
-    },
-    keyMaterial,
-    { name: "AES-GCM", length: 256 },
-    true,
-    ["encrypt", "decrypt"]
-  );
+  // 2. Try Secure Verification
+  if (!window.crypto || !window.crypto.subtle) {
+    console.error("Web Crypto API not supported for secure verification");
+    return false;
+  }
 
-  const exported = await crypto.subtle.exportKey("raw", key);
-  const computedHash = Array.from(new Uint8Array(exported)).map(b => b.toString(16).padStart(2, '0')).join('');
+  try {
+    const encoder = new TextEncoder();
+    
+    // Safely parse stored hex salt back to Uint8Array
+    const match = storedSalt.match(/.{1,2}/g);
+    if (!match) {
+        console.error("Invalid salt format in storage");
+        return false;
+    }
+    
+    const saltBytes = new Uint8Array(match.map(byte => parseInt(byte, 16)));
 
-  return computedHash === storedHash;
+    const keyMaterial = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(password),
+      { name: "PBKDF2" },
+      false,
+      ["deriveBits", "deriveKey"]
+    );
+
+    const key = await crypto.subtle.deriveKey(
+      {
+        name: "PBKDF2",
+        salt: saltBytes,
+        iterations: 100000,
+        hash: "SHA-256"
+      },
+      keyMaterial,
+      { name: "AES-GCM", length: 256 },
+      true,
+      ["encrypt", "decrypt"]
+    );
+
+    const exported = await crypto.subtle.exportKey("raw", key);
+    const computedHash = Array.from(new Uint8Array(exported)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+    return computedHash === storedHash;
+  } catch (e) {
+    console.error("Password verification error:", e);
+    return false;
+  }
+};
+
+// Generate Company Code (10 chars, lowercase alphanumeric)
+export const generateCompanyCode = (): string => {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  // Use crypto for better randomness if available, else fallback to Math.random
+  if (window.crypto && window.crypto.getRandomValues) {
+    const values = new Uint32Array(10);
+    window.crypto.getRandomValues(values);
+    for (let i = 0; i < 10; i++) {
+      result += chars.charAt(values[i] % chars.length);
+    }
+  } else {
+    for (let i = 0; i < 10; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+  }
+  return result;
 };
