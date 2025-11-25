@@ -73,16 +73,22 @@ const getServiceKey = () => {
 app.post('/api/nts/status', async (req, res) => {
   try {
     const serviceKey = getServiceKey();
+
+    console.log(`[NTS Status] Requesting: ${`https://api.odcloud.kr/api/nts-businessman/v1/status?serviceKey=${serviceKey.substring(0, 10)}...`}`);
+    console.log(`[NTS Status] Body:`, JSON.stringify(req.body));
+
     const response = await axios.post(
       `https://api.odcloud.kr/api/nts-businessman/v1/status?serviceKey=${serviceKey}`,
       req.body,
       { headers: { 'Content-Type': 'application/json' } }
     );
+    console.log(`[NTS Status] Success:`, response.data);
     res.json(response.data);
   } catch (error) {
     console.error('NTS Status API Error:', error.message);
     if (error.response) {
-      console.error('Error Details:', error.response.data);
+      console.error('Error Status:', error.response.status);
+      console.error('Error Data:', JSON.stringify(error.response.data));
     }
     res.status(error.response?.status || 500).json({
       error: 'Failed to fetch business status',

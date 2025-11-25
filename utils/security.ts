@@ -2,7 +2,7 @@
 // Check for sequential characters (e.g., 'abc', '123')
 export const hasSequentialChars = (str: string): boolean => {
   if (str.length < 3) return false;
-  
+
   for (let i = 0; i < str.length - 2; i++) {
     const code1 = str.charCodeAt(i);
     const code2 = str.charCodeAt(i + 1);
@@ -10,7 +10,7 @@ export const hasSequentialChars = (str: string): boolean => {
 
     // Check increasing sequence (e.g., abc, 123)
     if (code2 === code1 + 1 && code3 === code2 + 1) return true;
-    
+
     // Check decreasing sequence (e.g., cba, 321) if needed
     // if (code2 === code1 - 1 && code3 === code2 - 1) return true;
   }
@@ -24,7 +24,7 @@ export const analyzePassword = (password: string, email: string): PasswordStreng
   const hasNumber = /[0-9]/.test(password);
   const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
   const isLongEnough = password.length >= 10;
-  
+
   // Extract ID part from email for check
   const emailId = email.split('@')[0];
   const containsEmailId = emailId && password.includes(emailId);
@@ -90,7 +90,7 @@ export const hashPassword = async (password: string): Promise<{ hash: string; sa
   console.log("Using Fallback (Demo) Hashing");
   const fallbackSalt = Math.random().toString(36).substring(2, 15);
   // Simple pseudo-hash for demo only: Base64(password + salt)
-  const fallbackHash = btoa(password + fallbackSalt); 
+  const fallbackHash = btoa(password + fallbackSalt);
   return { hash: `DEMO:${fallbackHash}`, salt: fallbackSalt };
 };
 
@@ -112,14 +112,14 @@ export const verifyPassword = async (password: string, storedHash: string, store
 
   try {
     const encoder = new TextEncoder();
-    
+
     // Safely parse stored hex salt back to Uint8Array
     const match = storedSalt.match(/.{1,2}/g);
     if (!match) {
-        console.error("Invalid salt format in storage");
-        return false;
+      console.error("Invalid salt format in storage");
+      return false;
     }
-    
+
     const saltBytes = new Uint8Array(match.map(byte => parseInt(byte, 16)));
 
     const keyMaterial = await crypto.subtle.importKey(

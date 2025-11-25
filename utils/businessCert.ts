@@ -9,7 +9,7 @@ export interface BusinessInfo {
 }
 
 export const extractBusinessInfo = async (file: File): Promise<BusinessInfo> => {
-  const apiKey = process.env.API_KEY;
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
   if (!apiKey) throw new Error("API Key not found");
 
   const ai = new GoogleGenAI({ apiKey });
@@ -77,12 +77,16 @@ export const extractBusinessInfo = async (file: File): Promise<BusinessInfo> => 
 
 export const validateBusinessWithNTS = async (b_no: string, start_dt: string, p_nm: string): Promise<boolean> => {
   try {
+    // Sanitize inputs
+    const sanitizedBNo = b_no.replace(/-/g, '');
+    const sanitizedStartDt = start_dt.replace(/[.\-\/]/g, '');
+
     // 1. Status Check (휴/폐업 조회) - Call Proxy
     const statusRes = await fetch(`http://localhost:3001/api/nts/status`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        "b_no": [b_no]
+        "b_no": [sanitizedBNo]
       })
     });
 
@@ -95,6 +99,7 @@ export const validateBusinessWithNTS = async (b_no: string, start_dt: string, p_
 
     // Check for API-level errors returned by proxy
     if (statusData.error) {
+      // If it's a mock response, it won't have error, but if it does:
       throw new Error(statusData.error);
     }
 
@@ -120,8 +125,8 @@ export const validateBusinessWithNTS = async (b_no: string, start_dt: string, p_
       body: JSON.stringify({
         businesses: [
           {
-            b_no: b_no,
-            start_dt: start_dt,
+            b_no: sanitizedBNo,
+            start_dt: sanitizedStartDt,
             p_nm: p_nm
           }
         ]
@@ -156,3 +161,14 @@ export const validateBusinessWithNTS = async (b_no: string, start_dt: string, p_
     throw e;
   }
 }
+
+// Wrapper for BossSignupForm to match expected signature and return type
+export const validateBusinessNumber = async (b_no: string, p_nm: string, start_dt: string): Promise<{ valid: boolean; message?: string }> => {
+  try {
+    // Note: validateBusinessWithNTS takes (b_no, start_dt, p_nm)
+    const isValid = await validateBusinessWithNTS(b_no, start_dt, p_nm);
+    return { valid: isValid };
+  } catch (error: any) {
+    return { valid: false, message: error.message };
+  }
+};
