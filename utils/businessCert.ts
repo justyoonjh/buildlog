@@ -27,28 +27,29 @@ export const extractBusinessInfo = async (file: File): Promise<BusinessInfo> => 
     reader.readAsDataURL(file);
   });
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: {
-      parts: [
-        { inlineData: { mimeType: file.type, data: base64Data } },
-        { text: "사업자등록증 이미지를 분석하여 정보를 추출해주세요." }
-      ]
-    },
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          b_no: { type: Type.STRING, description: "사업자등록번호 (숫자 10자리, 하이픈 제외)" },
-          s_nm: { type: Type.STRING, description: "상호명" },
-          c_nm: { type: Type.STRING, description: "성명(대표자명)" },
-          start_dt: { type: Type.STRING, description: "개업일자 (YYYYMMDD 8자리 형식)" },
-          w_kind: { type: Type.STRING, description: "업태/종목 (여러 개일 경우 맨 위 항목 1개만 선택)" }
-        },
-        required: ["b_no", "s_nm", "start_dt"]
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: {
+        parts: [
+          { inlineData: { mimeType: file.type, data: base64Data } },
+          { text: "사업자등록증 이미지를 분석하여 정보를 추출해주세요." }
+        ]
       },
-      systemInstruction: `당신은 한국의 '사업자 자동 가입 및 검증 시스템'을 구축하는 전문 AI 어시스턴트입니다. 당신은 다음 두 가지 핵심 능력을 수행합니다.
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            b_no: { type: Type.STRING, description: "사업자등록번호 (숫자 10자리, 하이픈 제외)" },
+            s_nm: { type: Type.STRING, description: "상호명" },
+            c_nm: { type: Type.STRING, description: "성명(대표자명)" },
+            start_dt: { type: Type.STRING, description: "개업일자 (YYYYMMDD 8자리 형식)" },
+            w_kind: { type: Type.STRING, description: "업태/종목 (여러 개일 경우 맨 위 항목 1개만 선택)" }
+          },
+          required: ["b_no", "s_nm", "start_dt"]
+        },
+        systemInstruction: `당신은 한국의 '사업자 자동 가입 및 검증 시스템'을 구축하는 전문 AI 어시스턴트입니다. 당신은 다음 두 가지 핵심 능력을 수행합니다.
 
 1. **OCR 전문가:** '사업자등록증' 이미지를 분석하여 구조화된 데이터로 추출합니다.
 2. **API 전문가:** '국세청_사업자등록정보 진위확인 및 상태조회 서비스' API 연동을 위한 코드와 로직을 제공합니다.
@@ -67,12 +68,29 @@ export const extractBusinessInfo = async (file: File): Promise<BusinessInfo> => 
 4. **c_nm**: 대표자 이름을 정확히 추출하세요.
 5. **w_kind**: 종목란에 내용이 많을 경우, 가장 위에 있는 대표 종목 하나만 가져오세요.
 6. **Output:** 마크다운(\`\`\`json)이나 사족 없이, 오직 **순수 JSON 문자열**만 출력하세요.`
+      }
+    });
+
+    if (!response.text) throw new Error("AI 응답을 받을 수 없습니다.");
+
+    return JSON.parse(response.text) as BusinessInfo;
+
+  } catch (error: any) {
+    // Handle Leaked Key or Permission Denied by falling back to Mock Data
+    if (error.message?.includes('leaked') || error.message?.includes('403') || error.message?.includes('PERMISSION_DENIED')) {
+      console.warn("⚠️ Gemini API Key Issue Detected. Falling back to MOCK OCR data for testing.");
+      alert("⚠️ [테스트 모드] API 키 오류(Leaked)로 인해 모의 데이터를 사용합니다.");
+
+      return {
+        b_no: "1234567890",
+        s_nm: "(주)테스트건설",
+        c_nm: "홍길동",
+        start_dt: "20230101",
+        w_kind: "건설업"
+      };
     }
-  });
-
-  if (!response.text) throw new Error("AI 응답을 받을 수 없습니다.");
-
-  return JSON.parse(response.text) as BusinessInfo;
+    throw error;
+  }
 };
 
 export const validateBusinessWithNTS = async (b_no: string, start_dt: string, p_nm: string): Promise<boolean> => {

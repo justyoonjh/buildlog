@@ -60,7 +60,7 @@ export const mockAuthService = {
   },
 
   // Register (Now accepts plain password)
-  async register(userData: any): Promise<boolean> {
+  async register(userData: any): Promise<{ success: boolean; companyCode?: string }> {
     try {
       const res = await fetch(`${API_URL}/register`, {
         method: 'POST',
@@ -68,10 +68,11 @@ export const mockAuthService = {
         body: JSON.stringify(userData)
       });
 
-      return res.ok;
+      const data = await res.json();
+      return { success: res.ok, companyCode: data.companyCode };
     } catch (error) {
       console.error('Registration Error:', error);
-      return false;
+      return { success: false };
     }
   },
 

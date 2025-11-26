@@ -71,8 +71,12 @@ app.post('/api/auth/register', async (req, res) => {
 
     db.saveUser(newUser);
 
-    // Return success (exclude secrets)
-    res.json({ success: true, message: 'User registered successfully' });
+    // Return success with company code for frontend display
+    res.json({
+      success: true,
+      message: 'User registered successfully',
+      companyCode: newUser.companyCode
+    });
   } catch (error) {
     console.error('Register Error:', error);
     res.status(500).json({ error: 'Registration failed' });

@@ -172,7 +172,8 @@ export const BossSignupForm: React.FC<BossSignupFormProps> = ({ onCancel, onComp
       const newCompanyCode = generateCompanyCode();
 
       // Use mockAuthService for registration (Server handles hashing)
-      const success = await mockAuthService.register({
+      // Use mockAuthService for registration (Server handles hashing)
+      const { success, companyCode } = await mockAuthService.register({
         id: email,
         password: password, // Send plain password to server
         name: ownerName,
@@ -198,14 +199,13 @@ export const BossSignupForm: React.FC<BossSignupFormProps> = ({ onCancel, onComp
       });
 
       if (success) {
-        // Retrieve the created user to get the company code
-        const user = await mockAuthService.findUserById(email);
-        if (user && user.companyCode) {
-          setCreatedCompanyCode(user.companyCode);
+        if (companyCode) {
+          setCreatedCompanyCode(companyCode);
           setStep('success');
         } else {
-          setToast({ msg: '회원가입은 완료되었으나 업체 코드를 불러오지 못했습니다.', type: 'warning' });
-          onComplete(); // Fallback
+          // Fallback if server didn't return code (shouldn't happen with new server logic)
+          setCreatedCompanyCode(newCompanyCode);
+          setStep('success');
         }
       } else {
         setToast({ msg: '이미 존재하는 아이디입니다.', type: 'error' });

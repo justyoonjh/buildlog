@@ -1,25 +1,25 @@
 {
   "juhoyoon0901@naver.com": {
     "id": "juhoyoon0901@naver.com",
-    "name": "권영민",
+    "name": "안준현",
     "role": "boss",
-    "companyName": "엘씨파워코리아 (주)",
-    "companyCode": "y4tkrvm1u2",
-    "businessNumber": "1088178306",
+    "companyName": "패키지몰",
+    "companyCode": "sncs2udw6t",
+    "businessNumber": "2041939322",
     "phone": "010-8299-2804",
     "businessInfo": {
-      "b_no": "1088178306",
-      "c_nm": "권영민",
-      "start_dt": "20070207",
-      "p_nm": "권영민"
+      "b_no": "2041939322",
+      "c_nm": "안준현",
+      "start_dt": "20111005",
+      "p_nm": "안준현"
     },
     "address": {
-      "zipCode": "34155",
-      "address": "대전광역시 유성구 동서대로 49 (덕명동)",
-      "detailAddress": "한밭대학교"
+      "zipCode": "34153",
+      "address": "대전광역시 유성구 동서대로 98-39 (덕명동)",
+      "detailAddress": "삼성화재 유성연수원"
     },
-    "passwordHash": "b89131fa7584ea5b8b2af2d731725d4ac6319b19eb9bd7de94908d98ccbb5b301706e61920c90156342a81b64c3e08a2b834fae2334b9bed62925a140e29020a",
-    "passwordSalt": "4f6f1e7c03c516604457f044d765afaa",
-    "createdAt": 1764092517005
+    "passwordHash": "175bed778d6f6fcd608d06dcd4ef7f9bf2c569b2e6ba55a42dca50a0433f5dba002e8815cdc18f31625a51123299ffc93b1179030d849f72a2f07d561be83892",
+    "passwordSalt": "3511b9842cf7f8e5327e284394dafe97",
+    "createdAt": 1764179167763
   }
 }
