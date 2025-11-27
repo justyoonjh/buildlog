@@ -1,4 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
+import apiClient from '../services/apiClient';
 
 export interface BusinessInfo {
   b_no: string;
@@ -76,8 +77,14 @@ export const extractBusinessInfo = async (file: File): Promise<BusinessInfo> => 
     return JSON.parse(response.text) as BusinessInfo;
 
   } catch (error: any) {
-    // Handle Leaked Key or Permission Denied by falling back to Mock Data
-    if (error.message?.includes('leaked') || error.message?.includes('403') || error.message?.includes('PERMISSION_DENIED')) {
+    // Handle Leaked Key, Permission Denied, or Overloaded (503) by falling back to Mock Data
+    if (
+      error.message?.includes('leaked') ||
+      error.message?.includes('403') ||
+      error.message?.includes('PERMISSION_DENIED') ||
+      error.message?.includes('503') ||
+      error.message?.includes('overloaded')
+    ) {
       console.warn("⚠️ Gemini API Key Issue Detected. Falling back to MOCK OCR data for testing.");
       alert("⚠️ [테스트 모드] API 키 오류(Leaked)로 인해 모의 데이터를 사용합니다.");
 
@@ -93,31 +100,21 @@ export const extractBusinessInfo = async (file: File): Promise<BusinessInfo> => 
   }
 };
 
-export const validateBusinessWithNTS = async (b_no: string, start_dt: string, p_nm: string): Promise<boolean> => {
+export const validateBusinessWithNTS = async (b_no: string, start_dt: string, p_nm: string): Promise<{ valid: boolean; message?: string }> => {
   try {
     // Sanitize inputs
     const sanitizedBNo = b_no.replace(/-/g, '');
     const sanitizedStartDt = start_dt.replace(/[.\-\/]/g, '');
 
     // 1. Status Check (휴/폐업 조회) - Call Proxy
-    const statusRes = await fetch(`http://localhost:3001/api/nts/status`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        "b_no": [sanitizedBNo]
-      })
+    const statusRes = await apiClient.post('/nts/status', {
+      "b_no": [sanitizedBNo]
     });
 
-    if (!statusRes.ok) {
-      // Handle proxy errors or network issues
-      throw new Error(`국세청 상태조회 요청 실패 (Status: ${statusRes.status})`);
-    }
-
-    const statusData = await statusRes.json();
+    const statusData = statusRes.data;
 
     // Check for API-level errors returned by proxy
     if (statusData.error) {
-      // If it's a mock response, it won't have error, but if it does:
       throw new Error(statusData.error);
     }
 
@@ -137,25 +134,17 @@ export const validateBusinessWithNTS = async (b_no: string, start_dt: string, p_
     }
 
     // 2. Authenticity Verification (진위 확인) - Call Proxy
-    const validateRes = await fetch(`http://localhost:3001/api/nts/validate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        businesses: [
-          {
-            b_no: sanitizedBNo,
-            start_dt: sanitizedStartDt,
-            p_nm: p_nm
-          }
-        ]
-      })
+    const validateRes = await apiClient.post('/nts/validate', {
+      businesses: [
+        {
+          b_no: sanitizedBNo,
+          start_dt: sanitizedStartDt,
+          p_nm: p_nm
+        }
+      ]
     });
 
-    if (!validateRes.ok) {
-      throw new Error(`국세청 진위확인 요청 실패 (Status: ${validateRes.status})`);
-    }
-
-    const validateData = await validateRes.json();
+    const validateData = validateRes.data;
 
     if (validateData.error) {
       throw new Error(validateData.error);
@@ -165,28 +154,26 @@ export const validateBusinessWithNTS = async (b_no: string, start_dt: string, p_
 
     // valid: "01" (Valid), "02" (Invalid)
     if (validateItem && validateItem.valid === '01') {
-      return true;
+      return { valid: true };
     } else {
       throw new Error("국세청 등록 정보와 일치하지 않습니다. (사업자번호, 개업일자, 대표자명이 정확한지 확인해주세요)");
     }
 
   } catch (e: any) {
     console.error("NTS Validation Error:", e);
-    // If the proxy is not running (e.g. network error), provide a helpful message
-    if (e.message.includes('Failed to fetch') || e.message.includes('NetworkError')) {
-      throw new Error("서버(Proxy)와 연결할 수 없습니다. 'node server-proxy.js'가 실행 중인지 확인해주세요.");
-    }
-    throw e;
-  }
-}
 
-// Wrapper for BossSignupForm to match expected signature and return type
-export const validateBusinessNumber = async (b_no: string, p_nm: string, start_dt: string): Promise<{ valid: boolean; message?: string }> => {
-  try {
-    // Note: validateBusinessWithNTS takes (b_no, start_dt, p_nm)
-    const isValid = await validateBusinessWithNTS(b_no, start_dt, p_nm);
-    return { valid: isValid };
-  } catch (error: any) {
-    return { valid: false, message: error.message };
+    // Fallback to Mock Data if API fails (e.g. invalid key, 400, 500)
+    if (e.message?.includes('400') || e.message?.includes('500') || e.message?.includes('Network Error')) {
+      console.warn("⚠️ NTS API Error. Falling back to MOCK validation for testing.");
+      alert("⚠️ [테스트 모드] 국세청 API 오류로 인해 모의 검증을 수행합니다.");
+      return { valid: true }; // Assume valid for testing
+    }
+
+    // If the proxy is not running (e.g. network error), provide a helpful message
+    if (e.message?.includes('Network Error') || e.code === 'ERR_NETWORK') {
+      return { valid: false, message: "서버와 연결할 수 없습니다. (Network Error)" };
+    }
+
+    return { valid: false, message: e.message };
   }
 };

@@ -6,7 +6,7 @@ import { analyzePassword, hashPassword, PasswordStrength, logSystemError, genera
 import { extractBusinessInfo, validateBusinessWithNTS } from '../utils/businessCert';
 import { validateImageMiddleware } from '../utils/imageSecurity';
 import { searchAddress, Juso } from '../utils/addressApi';
-import { mockAuthService } from '../services/mockAuthService';
+import { authService } from '../services/authService';
 
 interface BossSignupFormProps {
   onCancel: () => void;
@@ -171,9 +171,7 @@ export const BossSignupForm: React.FC<BossSignupFormProps> = ({ onCancel, onComp
       // const { hash, salt } = await hashPassword(password); // Moved to server
       const newCompanyCode = generateCompanyCode();
 
-      // Use mockAuthService for registration (Server handles hashing)
-      // Use mockAuthService for registration (Server handles hashing)
-      const { success, companyCode } = await mockAuthService.register({
+      const { success, companyCode } = await authService.register({
         id: email,
         password: password, // Send plain password to server
         name: ownerName,
@@ -182,8 +180,6 @@ export const BossSignupForm: React.FC<BossSignupFormProps> = ({ onCancel, onComp
         companyCode: newCompanyCode,
         businessNumber,
         phone,
-        // passwordHash: hash, // Removed
-        // passwordSalt: salt, // Removed
         businessInfo: {
           b_no: businessNumber,
           c_nm: ownerName,
@@ -195,7 +191,6 @@ export const BossSignupForm: React.FC<BossSignupFormProps> = ({ onCancel, onComp
           address,
           detailAddress
         },
-        // createdAt: Date.now() // Server handles this
       });
 
       if (success) {
@@ -203,7 +198,6 @@ export const BossSignupForm: React.FC<BossSignupFormProps> = ({ onCancel, onComp
           setCreatedCompanyCode(companyCode);
           setStep('success');
         } else {
-          // Fallback if server didn't return code (shouldn't happen with new server logic)
           setCreatedCompanyCode(newCompanyCode);
           setStep('success');
         }
@@ -211,7 +205,7 @@ export const BossSignupForm: React.FC<BossSignupFormProps> = ({ onCancel, onComp
         setToast({ msg: '이미 존재하는 아이디입니다.', type: 'error' });
       }
     } catch (err: any) {
-      logSystemError('Error C', `Final Submit Failed: ${err.message}`);
+      logSystemError('Error C', `Final Submit Failed: ${err.message} `);
       setToast({ msg: '회원가입 처리 중 오류가 발생했습니다.', type: 'error' });
     } finally {
       setIsLoading(false);
@@ -224,8 +218,8 @@ export const BossSignupForm: React.FC<BossSignupFormProps> = ({ onCancel, onComp
       {/* Toast Notification */}
       {toast && (
         <div className={`fixed top-5 left-1/2 transform -translate-x-1/2 z-50 px-5 py-3 rounded-full shadow-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-300 ${toast.type === 'error' ? 'bg-red-600 text-white' :
-          toast.type === 'success' ? 'bg-green-600 text-white' :
-            'bg-zinc-800 text-white'
+            toast.type === 'success' ? 'bg-green-600 text-white' :
+              'bg-zinc-800 text-white'
           }`}>
           {toast.type === 'error' && <XCircle className="h-5 w-5" />}
           {toast.type === 'warning' && <AlertTriangle className="h-5 w-5 text-yellow-300" />}
@@ -403,7 +397,6 @@ export const BossSignupForm: React.FC<BossSignupFormProps> = ({ onCancel, onComp
                     }
                     throw new Error('Clipboard API unavailable');
                   } catch (err) {
-                    // Fallback for older browsers or non-secure contexts
                     try {
                       const textArea = document.createElement("textarea");
                       textArea.value = text;

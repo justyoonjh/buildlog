@@ -85,6 +85,22 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSubmit, onSignupClick, i
       >
         로그인
       </Button>
+
+      {/* Dev Only: Data Reset */}
+      <div className="pt-4 text-center">
+        <button
+          type="button"
+          onClick={async () => {
+            if (confirm('모든 데이터를 초기화하시겠습니까?')) {
+              const { authService } = await import('../services/authService');
+              await authService.resetData();
+            }
+          }}
+          className="text-xs text-slate-300 hover:text-red-400 transition-colors"
+        >
+          [개발용] 데이터 초기화
+        </button>
+      </div>
     </form>
   );
 };

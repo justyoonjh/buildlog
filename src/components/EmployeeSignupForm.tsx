@@ -3,7 +3,7 @@ import { ArrowLeft, Check, Building2, User, Lock, Phone, AlertTriangle, CheckCir
 import { Button } from './Button';
 import { Input } from './Input';
 import { hashPassword, analyzePassword, PasswordStrength } from '../utils/security';
-import { mockAuthService } from '../services/mockAuthService';
+import { authService } from '../services/authService';
 
 interface EmployeeSignupFormProps {
   onCancel: () => void;
@@ -55,7 +55,7 @@ export const EmployeeSignupForm: React.FC<EmployeeSignupFormProps> = ({ onCancel
     }
     setIsCheckingDuplicate(true);
     try {
-      const user = await mockAuthService.findUserById(signupEmail);
+      const user = await authService.findUserById(signupEmail);
       if (user) {
         setToast({ msg: '이미 사용 중인 아이디입니다.', type: 'error' });
         setIsEmailChecked(false);
@@ -97,7 +97,7 @@ export const EmployeeSignupForm: React.FC<EmployeeSignupFormProps> = ({ onCancel
     setIsLoading(true);
     try {
       // 1. Verify Company Code
-      const boss = await mockAuthService.findBossByCompanyCode(inputCompanyCode);
+      const boss = await authService.findBossByCompanyCode(inputCompanyCode);
 
       if (!boss) {
         setToast({ msg: '유효하지 않은 업체 코드입니다.', type: 'error' });
@@ -121,7 +121,7 @@ export const EmployeeSignupForm: React.FC<EmployeeSignupFormProps> = ({ onCancel
         // createdAt: Date.now() // Server handles this
       };
 
-      const success = await mockAuthService.register(newUser);
+      const success = await authService.register(newUser);
 
       if (success) {
         setStep('success');

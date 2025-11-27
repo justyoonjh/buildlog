@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Plus } from 'lucide-react';
+import { formatDate, getLunarDate } from '../../utils/dateUtils';
+import { scheduleService } from '../../services/scheduleService';
 
 interface ScheduleBottomSheetProps {
   selectedDate: Date;
@@ -8,43 +10,7 @@ interface ScheduleBottomSheetProps {
 }
 
 export const ScheduleBottomSheet: React.FC<ScheduleBottomSheetProps> = ({ selectedDate, isExpanded, onToggleExpand }) => {
-  // Mock Schedule Data (Simplified to 1 item, fixed to today)
-  const today = new Date();
-  const schedules = [
-    {
-      id: 1,
-      time: '오후 3시',
-      title: 'A동 기초 콘크리트 타설',
-      type: 'work',
-      date: `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-    },
-  ];
-
-  const filteredSchedules = schedules.filter(item => {
-    const itemDate = item.date;
-    const selectedDateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
-    return itemDate === selectedDateStr;
-  });
-
-  const formatDate = (date: Date) => {
-    const days = ['일', '월', '화', '수', '목', '금', '토'];
-    return `${date.getMonth() + 1}월 ${date.getDate()}일 ${days[date.getDay()]}요일`;
-  };
-
-  const getLunarDate = (date: Date) => {
-    try {
-      const formatter = new Intl.DateTimeFormat('ko-KR-u-ca-chinese', {
-        month: 'numeric',
-        day: 'numeric',
-      });
-      // format returns something like "8월 10일"
-      const lunarString = formatter.format(date);
-      // Convert "8월 10일" to "8.10"
-      return `음 ${lunarString.replace('월 ', '.').replace('일', '')}`;
-    } catch (e) {
-      return '';
-    }
-  };
+  const filteredSchedules = useMemo(() => scheduleService.getSchedulesByDate(selectedDate), [selectedDate]);
 
   return (
     <div

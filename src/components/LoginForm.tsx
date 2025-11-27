@@ -5,7 +5,7 @@ import { AuthLayout } from './AuthLayout';
 import { LoginView } from './LoginView';
 import { SignupSelectionView } from './SignupSelectionView';
 import { useAuthStore } from '../stores/useAuthStore';
-import { mockAuthService } from '../services/mockAuthService';
+import { authService } from '../services/authService';
 
 interface LoginAttempt {
   count: number;
@@ -19,6 +19,7 @@ export const LoginForm: React.FC = () => {
   // Local state for lockout logic (client-side security layer)
   const [loginAttempts, setLoginAttempts] = useState<Record<string, LoginAttempt>>({});
   const [localError, setLocalError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleLoginSubmit = async (id: string, password: string) => {
     clearError();
@@ -33,28 +34,38 @@ export const LoginForm: React.FC = () => {
       return;
     }
 
+    setIsSubmitting(true);
+
     // Attempt Login via Store
-    const success = await login(trimmedId, password);
+    try {
+      const result = await authService.login(trimmedId, password);
+      if (result) {
+        login(result);
+        // Clear attempts on success
+        const newAttempts = { ...loginAttempts };
+        delete newAttempts[trimmedId];
+        setLoginAttempts(newAttempts);
+      } else {
+        const newAttempts = { ...loginAttempts };
+        const currentCount = (newAttempts[trimmedId]?.count || 0) + 1;
+        let lockTime: number | null = null;
 
-    if (!success) {
-      const newAttempts = { ...loginAttempts };
-      const currentCount = (newAttempts[trimmedId]?.count || 0) + 1;
-      let lockTime: number | null = null;
+        if (currentCount > 5) {
+          lockTime = Date.now() + 30 * 60 * 1000;
+          setLocalError('비밀번호를 5회 이상 틀려 30분간 접속이 제한됩니다.');
+        } else {
+          setLocalError('아이디 또는 비밀번호가 올바르지 않습니다.');
+        }
 
-      if (currentCount > 5) {
-        lockTime = Date.now() + 30 * 60 * 1000;
-        setLocalError('비밀번호를 5회 이상 틀려 30분간 접속이 제한됩니다.');
+        setLoginAttempts({
+          ...newAttempts,
+          [trimmedId]: { count: currentCount, lockUntil: lockTime }
+        });
       }
-
-      setLoginAttempts({
-        ...newAttempts,
-        [trimmedId]: { count: currentCount, lockUntil: lockTime }
-      });
-    } else {
-      // Clear attempts on success
-      const newAttempts = { ...loginAttempts };
-      delete newAttempts[trimmedId];
-      setLoginAttempts(newAttempts);
+    } catch (err) {
+      setLocalError('로그인 중 오류가 발생했습니다.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -84,7 +95,7 @@ export const LoginForm: React.FC = () => {
         <LoginView
           onSubmit={handleLoginSubmit}
           onSignupClick={() => setView('signup-select')}
-          isLoading={isLoading}
+          isLoading={isLoading || isSubmitting}
           error={localError || storeError}
         />
       )}

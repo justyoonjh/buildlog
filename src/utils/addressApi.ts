@@ -1,3 +1,5 @@
+import apiClient from '../services/apiClient';
+
 export interface Juso {
   roadAddr: string;    // Road Name Address
   jibunAddr: string;   // Jibun Address
@@ -26,17 +28,14 @@ export interface JusoResponse {
  */
 export const searchAddress = async (keyword: string): Promise<Juso[]> => {
   try {
-    // Attempt to call the local proxy (server-proxy.js)
-    // In this demo environment, this fetch will likely fail (404/Network Error),
-    // triggering the catch block to return mock data.
-    const response = await fetch(`http://localhost:3001/api/address/search?keyword=${encodeURIComponent(keyword)}`);
-    
-    if (!response.ok) {
-      throw new Error('Proxy server not reachable');
-    }
+    // Attempt to call the local proxy via apiClient
+    // Set a short timeout (e.g. 2000ms) to fail fast if the server is unreachable
+    const response = await apiClient.get(`/address/search?keyword=${encodeURIComponent(keyword)}`, {
+      timeout: 2000
+    });
 
-    const data: JusoResponse = await response.json();
-    
+    const data: JusoResponse = response.data;
+
     if (data.results.common.errorCode !== '0') {
       throw new Error(data.results.common.errorMessage);
     }
@@ -44,7 +43,7 @@ export const searchAddress = async (keyword: string): Promise<Juso[]> => {
     return data.results.juso;
 
   } catch (error) {
-    console.warn("Backend proxy not connected. Returning smart mock data for demo.");
+    console.warn("Backend proxy not connected or error. Returning smart mock data for demo.");
     return getMockAddressData(keyword);
   }
 };
@@ -54,11 +53,11 @@ export const searchAddress = async (keyword: string): Promise<Juso[]> => {
  */
 const getMockAddressData = (keyword: string): Juso[] => {
   const term = keyword.trim();
-  
+
   if (!term) return [];
 
   // Simulate server delay
-  const mockDelay = 500; 
+  const mockDelay = 500;
 
   // Specific mocks for demo scenarios
   if (term.includes('판교')) {
