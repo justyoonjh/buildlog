@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, FolderKanban, Box } from 'lucide-react';
+import { Home, FolderKanban, BarChart3 } from 'lucide-react';
 
 interface BottomNavigationProps {
   activeTab: string;
@@ -26,11 +26,11 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, o
       </button>
 
       <button
-        onClick={() => onTabChange('modeling')}
-        className={`flex flex-col items-center justify-center w-full h-full ${activeTab === 'modeling' ? 'text-slate-900' : 'text-slate-400'}`}
+        onClick={() => onTabChange('analysis')}
+        className={`flex flex-col items-center justify-center w-full h-full ${activeTab === 'analysis' ? 'text-slate-900' : 'text-slate-400'}`}
       >
-        <Box size={24} strokeWidth={activeTab === 'modeling' ? 2.5 : 2} />
-        <span className="text-[10px] font-medium mt-1">모델링</span>
+        <BarChart3 size={24} strokeWidth={activeTab === 'analysis' ? 2.5 : 2} />
+        <span className="text-[10px] font-medium mt-1">분석</span>
       </button>
     </nav>
   );

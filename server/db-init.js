@@ -30,10 +30,64 @@ const initDatabase = () => {
       businessInfo TEXT,
       address TEXT,
       createdAt INTEGER
-    )
+    );
+
+    CREATE TABLE IF NOT EXISTS estimates (
+      id TEXT PRIMARY KEY,
+      userId TEXT,
+      clientName TEXT,
+      clientPhone TEXT,
+      siteAddress TEXT,
+      startDate TEXT,
+      endDate TEXT,
+      totalAmount INTEGER,
+      vatIncluded INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'negotiating',
+      memo TEXT,
+      modelImage TEXT,
+      generatedImage TEXT,
+      styleDescription TEXT,
+      createdAt INTEGER,
+      updatedAt INTEGER,
+      FOREIGN KEY(userId) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS estimate_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      estimateId TEXT,
+      category TEXT,
+      description TEXT,
+      spec TEXT,
+      quantity REAL,
+      unit TEXT,
+      unitPrice INTEGER,
+      amount INTEGER,
+      FOREIGN KEY(estimateId) REFERENCES estimates(id) ON DELETE CASCADE
+    );
   `);
 
   console.log('Database schema ensured.');
+
+  // --- Schema Migration for Existing Databases ---
+  try {
+    const columns = db.prepare('PRAGMA table_info(estimates)').all();
+    const columnNames = columns.map(c => c.name);
+
+    if (!columnNames.includes('modelImage')) {
+      console.log('Migrating: Adding modelImage to estimates table...');
+      db.exec('ALTER TABLE estimates ADD COLUMN modelImage TEXT');
+    }
+    if (!columnNames.includes('generatedImage')) {
+      console.log('Migrating: Adding generatedImage to estimates table...');
+      db.exec('ALTER TABLE estimates ADD COLUMN generatedImage TEXT');
+    }
+    if (!columnNames.includes('styleDescription')) {
+      console.log('Migrating: Adding styleDescription to estimates table...');
+      db.exec('ALTER TABLE estimates ADD COLUMN styleDescription TEXT');
+    }
+  } catch (err) {
+    console.error('Schema migration failed:', err);
+  }
 
   // Migration Logic
   const userCount = db.prepare('SELECT count(*) as count FROM users').get().count;

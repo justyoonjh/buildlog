@@ -2,6 +2,7 @@ import React from 'react';
 import { LoginForm } from './components/LoginForm';
 import { HomeView } from './components/home/HomeView';
 import { useAuthStore } from './stores/useAuthStore';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 function App() {
   const { user, checkLoginStatus, isLoading } = useAuthStore();
@@ -15,10 +16,18 @@ function App() {
   }
 
   if (!user) {
-    return <LoginForm />;
+    return (
+      <ErrorBoundary>
+        <LoginForm />
+      </ErrorBoundary>
+    );
   }
 
-  return <HomeView />;
+  return (
+    <ErrorBoundary>
+      <HomeView />
+    </ErrorBoundary>
+  );
 }
 
 export default App;

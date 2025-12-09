@@ -2,15 +2,7 @@ import { Schedule } from '../types';
 
 // Mock Data
 const today = new Date();
-const MOCK_SCHEDULES: Schedule[] = [
-  {
-    id: 1,
-    time: '오후 3시',
-    title: 'A동 기초 콘크리트 타설',
-    type: 'work',
-    date: `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-  },
-];
+const MOCK_SCHEDULES: Schedule[] = [];
 
 export const scheduleService = {
   getSchedulesByDate: (date: Date): Schedule[] => {

@@ -9,9 +9,10 @@ interface CalendarViewProps {
   selectedDate: Date;
   onDateSelect: (date: Date) => void;
   isWeekView: boolean;
+  projects?: any[]; // Allow projects to be passed
 }
 
-export const CalendarView: React.FC<CalendarViewProps> = ({ selectedDate, onDateSelect, isWeekView }) => {
+export const CalendarView: React.FC<CalendarViewProps> = ({ selectedDate, onDateSelect, isWeekView, projects = [] }) => {
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   const {
@@ -67,6 +68,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ selectedDate, onDate
           weekDays={weekDays}
           selectedDate={selectedDate}
           onDateSelect={onDateSelect}
+          projects={projects}
         />
       ) : (
         <MonthGrid
@@ -75,6 +77,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ selectedDate, onDate
           viewDate={viewDate}
           selectedDate={selectedDate}
           onDateSelect={onDateSelect}
+          projects={projects}
         />
       )}
 
