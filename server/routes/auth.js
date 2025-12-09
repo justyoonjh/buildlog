@@ -80,9 +80,14 @@ router.post('/register', async (req, res) => {
     const newUser = {
       id,
       ...userData,
+      companyName: userData.companyName || userData.businessInfo?.s_nm || userData.businessInfo?.c_nm || '알 수 없는 업체',
       passwordHash: hash,
       createdAt: Date.now()
     };
+
+
+
+    console.log('DEBUG: Registering New User:', JSON.stringify(newUser, null, 2));
 
     await db.saveUser(newUser);
 
@@ -159,6 +164,7 @@ router.get('/verify-code', async (req, res) => {
   if (boss) {
     res.json({
       valid: true,
+      companyName: boss.companyName,
       businessInfo: boss.businessInfo
     });
   } else {

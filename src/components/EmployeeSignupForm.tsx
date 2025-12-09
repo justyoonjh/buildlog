@@ -114,6 +114,7 @@ export const EmployeeSignupForm: React.FC<EmployeeSignupFormProps> = ({ onCancel
         name: signupName,
         role: 'employee' as const,
         companyCode: inputCompanyCode,
+        companyName: boss.companyName || boss.businessInfo?.s_nm || '알 수 없는 업체', // Fallback to business info
         phone: signupPhone,
         // passwordHash: hash, // Removed
         // passwordSalt: salt, // Removed

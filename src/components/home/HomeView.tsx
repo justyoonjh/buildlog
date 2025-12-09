@@ -5,6 +5,7 @@ import { ScheduleBottomSheet } from './ScheduleBottomSheet';
 import { BottomNavigation } from './BottomNavigation';
 import { UserProfileModal } from './UserProfileModal';
 import { BusinessInfoModal } from './BusinessInfoModal';
+import { ProjectView } from '../project/ProjectView';
 
 export const HomeView: React.FC = () => {
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
@@ -53,7 +54,9 @@ export const HomeView: React.FC = () => {
           </>
         )}
 
-        {activeTab !== 'home' && (
+        {activeTab === 'project' && <ProjectView />}
+
+        {activeTab === 'modeling' && (
           <div className="flex-1 flex items-center justify-center text-slate-400">
             준비 중인 화면입니다.
           </div>

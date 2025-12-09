@@ -183,6 +183,7 @@ export const BossSignupForm: React.FC<BossSignupFormProps> = ({ onCancel, onComp
         businessInfo: {
           b_no: businessNumber,
           c_nm: ownerName,
+          s_nm: companyName, // Include Company Name in Business Info
           start_dt: openDate,
           p_nm: ownerName,
         },
@@ -194,13 +195,8 @@ export const BossSignupForm: React.FC<BossSignupFormProps> = ({ onCancel, onComp
       });
 
       if (success) {
-        if (companyCode) {
-          setCreatedCompanyCode(companyCode);
-          setStep('success');
-        } else {
-          setCreatedCompanyCode(newCompanyCode);
-          setStep('success');
-        }
+        alert('회원가입이 완료되었습니다. 로그인해주세요.');
+        onComplete(); // Redirect to login immediately
       } else {
         setToast({ msg: '이미 존재하는 아이디입니다.', type: 'error' });
       }
@@ -218,8 +214,8 @@ export const BossSignupForm: React.FC<BossSignupFormProps> = ({ onCancel, onComp
       {/* Toast Notification */}
       {toast && (
         <div className={`fixed top-5 left-1/2 transform -translate-x-1/2 z-50 px-5 py-3 rounded-full shadow-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-300 ${toast.type === 'error' ? 'bg-red-600 text-white' :
-            toast.type === 'success' ? 'bg-green-600 text-white' :
-              'bg-zinc-800 text-white'
+          toast.type === 'success' ? 'bg-green-600 text-white' :
+            'bg-zinc-800 text-white'
           }`}>
           {toast.type === 'error' && <XCircle className="h-5 w-5" />}
           {toast.type === 'warning' && <AlertTriangle className="h-5 w-5 text-yellow-300" />}

@@ -50,11 +50,14 @@ export const authService = {
     }
   },
 
-  async findBossByCompanyCode(code: string): Promise<{ businessInfo: BusinessInfo } | null> {
+  async findBossByCompanyCode(code: string): Promise<{ businessInfo: BusinessInfo; companyName?: string } | null> {
     try {
       const response = await apiClient.get(`/auth/verify-code?code=${code}`);
       if (response.data.valid) {
-        return { businessInfo: response.data.businessInfo };
+        return {
+          businessInfo: response.data.businessInfo,
+          companyName: response.data.companyName
+        };
       }
       return null;
     } catch (error) {
