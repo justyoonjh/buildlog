@@ -59,19 +59,12 @@ app.use(session({
   }
 }));
 
-// Debug Middleware: Log Cookies
-app.use((req, res, next) => {
-  console.log('--- Request Debug ---');
-  console.log('URL:', req.url);
-  console.log('Session ID:', req.sessionID);
-  console.log('Session:', req.session);
-  console.log('Cookies:', req.headers.cookie);
-  next();
-});
-
 // --- Routes ---
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api', require('./routes/external'));
+
+// --- Global Error Handler ---
+app.use(require('./middleware/errorHandler'));
 
 app.listen(config.PORT, () => {
   console.log(`Server running on port ${config.PORT}`);
