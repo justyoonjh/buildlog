@@ -65,6 +65,26 @@ export const authService = {
     }
   },
 
+  async checkSession(): Promise<User | null> {
+    try {
+      const response = await apiClient.get('/auth/me');
+      if (response.data.authenticated) {
+        return response.data.user;
+      }
+      return null;
+    } catch (error) {
+      return null;
+    }
+  },
+
+  async logout(): Promise<void> {
+    try {
+      await apiClient.post('/auth/logout');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  },
+
   async resetData() {
     try {
       await apiClient.post('/auth/reset');

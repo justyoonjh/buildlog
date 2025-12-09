@@ -16,26 +16,23 @@ export const useAuthStore = create<AuthStore>((set) => ({
   error: null,
 
   login: (user) => {
-    localStorage.setItem('user', JSON.stringify(user));
     set({ isAuthenticated: true, user, error: null });
   },
 
-  logout: () => {
-    localStorage.removeItem('user');
+  logout: async () => {
+    await authService.logout();
     set({ isAuthenticated: false, user: null, error: null });
   },
 
-  checkLoginStatus: () => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      try {
-        const user = JSON.parse(storedUser);
+  checkLoginStatus: async () => {
+    try {
+      const user = await authService.checkSession();
+      if (user) {
         set({ isAuthenticated: true, user, isLoading: false });
-      } catch (e) {
-        localStorage.removeItem('user');
+      } else {
         set({ isAuthenticated: false, user: null, isLoading: false });
       }
-    } else {
+    } catch (error) {
       set({ isAuthenticated: false, user: null, isLoading: false });
     }
   },

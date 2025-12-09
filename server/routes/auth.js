@@ -1,21 +1,18 @@
 const express = require('express');
 const router = express.Router();
-const argon2 = require('argon2');
 const { z } = require('zod');
 const rateLimit = require('express-rate-limit');
-const db = require('../server-db');
-const config = require('../server-config');
+const authService = require('../services/authService');
 
 // --- Rate Limiting ---
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 15 * 60 * 1000,
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests from this IP, please try again later.' }
 });
 
-// Apply rate limiting to all auth routes
 router.use(authLimiter);
 
 // --- Validation Schemas ---
@@ -27,8 +24,18 @@ const registerSchema = z.object({
   phone: z.string().optional(),
   companyName: z.string().optional(),
   businessNumber: z.string().optional(),
-  businessInfo: z.any().optional(),
-  address: z.any().optional(),
+  businessInfo: z.object({
+    b_no: z.string().optional(),
+    c_nm: z.string().optional(),
+    s_nm: z.string().optional(),
+    start_dt: z.string().optional(),
+    p_nm: z.string().optional()
+  }).optional(),
+  address: z.object({
+    zipCode: z.string().optional(),
+    address: z.string().optional(),
+    detailAddress: z.string().optional()
+  }).optional(),
   companyCode: z.string().optional()
 });
 
@@ -36,25 +43,6 @@ const loginSchema = z.object({
   id: z.string().min(1, 'ID is required'),
   password: z.string().min(1, 'Password is required')
 });
-
-// --- Helper: Password Hashing (Argon2) ---
-const hashPassword = async (password) => {
-  try {
-    return await argon2.hash(password);
-  } catch (err) {
-    console.error('Hashing failed:', err);
-    throw new Error('Hashing failed');
-  }
-};
-
-const verifyPassword = async (password, storedHash) => {
-  try {
-    return await argon2.verify(storedHash, password);
-  } catch (err) {
-    console.error('Verification failed:', err);
-    return false;
-  }
-};
 
 // --- Auth Endpoints ---
 
@@ -69,37 +57,25 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    const { id, password, ...userData } = validationResult.data;
+    const safeUser = await authService.register(validationResult.data);
 
-    if (await db.findUserById(id)) {
-      return res.status(409).json({ error: 'User already exists' });
-    }
+    // Save session
+    req.session.user = safeUser;
 
-    const hash = await hashPassword(password);
-
-    const newUser = {
-      id,
-      ...userData,
-      companyName: userData.companyName || userData.businessInfo?.s_nm || userData.businessInfo?.c_nm || '알 수 없는 업체',
-      passwordHash: hash,
-      createdAt: Date.now()
-    };
-
-
-
-    console.log('DEBUG: Registering New User:', JSON.stringify(newUser, null, 2));
-
-    await db.saveUser(newUser);
-
-    const { passwordHash, passwordSalt, ...safeUser } = newUser;
-
-    res.json({
-      success: true,
-      message: 'User registered successfully',
-      companyCode: newUser.companyCode,
-      user: safeUser
+    req.session.save((err) => {
+      if (err) console.error('Session save error:', err);
+      res.json({
+        success: true,
+        message: 'User registered successfully',
+        companyCode: safeUser.companyCode,
+        user: safeUser
+      });
     });
+
   } catch (error) {
+    if (error.message === 'User already exists') {
+      return res.status(409).json({ error: error.message });
+    }
     console.error('Register Error:', error);
     res.status(500).json({ error: 'Registration failed' });
   }
@@ -118,29 +94,22 @@ router.post('/login', async (req, res) => {
 
     const { id, password } = validationResult.data;
 
-    if (id === 'admin' && password === 'password123!') {
-      const adminUser = { id: 'admin', name: '현장 관리자', role: 'admin' };
-      return res.json({
-        success: true,
-        user: adminUser
-      });
-    }
+    // authService.login throws error or returns user.
+    const safeUser = await authService.login(id, password);
 
-    const user = await db.findUserById(id);
-    if (!user) {
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
+    // Save session
+    req.session.user = safeUser;
 
-    const isValid = await verifyPassword(password, user.passwordHash);
-    if (!isValid) {
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
+    req.session.save((err) => {
+      if (err) console.error('Session save error:', err);
+      res.json({ success: true, user: safeUser });
+    });
 
-    const { passwordHash, passwordSalt, ...safeUser } = user;
-
-    res.json({ success: true, user: safeUser });
 
   } catch (error) {
+    if (error.message === 'Invalid credentials') {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
     console.error('Login Error:', error);
     res.status(500).json({ error: 'Login failed' });
   }
@@ -151,8 +120,8 @@ router.get('/check-id', async (req, res) => {
   const { id } = req.query;
   if (!id) return res.status(400).json({ error: 'ID is required' });
 
-  const exists = !!(await db.findUserById(id));
-  res.json({ exists });
+  const user = await authService.findUserById(id);
+  res.json({ exists: !!user });
 });
 
 // Verify Company Code
@@ -160,27 +129,41 @@ router.get('/verify-code', async (req, res) => {
   const { code } = req.query;
   if (!code) return res.status(400).json({ error: 'Code is required' });
 
-  const boss = await db.findBossByCode(code);
-  if (boss) {
-    res.json({
-      valid: true,
-      companyName: boss.companyName,
-      businessInfo: boss.businessInfo
-    });
-  } else {
-    res.json({ valid: false });
-  }
+  const result = await authService.verifyCompanyCode(code);
+  res.json(result);
 });
 
 // Reset Data (Dev only)
 router.post('/reset', async (req, res) => {
   try {
-    await db.resetUsers();
+    await authService.resetUsers();
     res.json({ success: true, message: 'Database reset successfully' });
   } catch (error) {
     console.error('Reset Error:', error);
     res.status(500).json({ error: 'Reset failed' });
   }
+});
+
+// Get Current User (Session)
+router.get('/me', (req, res) => {
+  console.log('GET /me - Session:', req.session);
+  if (req.session && req.session.user) {
+    res.json({ authenticated: true, user: req.session.user });
+  } else {
+    res.status(401).json({ authenticated: false });
+  }
+});
+
+// Logout
+router.post('/logout', (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      console.error('Logout Error:', err);
+      return res.status(500).json({ error: 'Logout failed' });
+    }
+    res.clearCookie('connect.sid');
+    res.json({ success: true });
+  });
 });
 
 module.exports = router;

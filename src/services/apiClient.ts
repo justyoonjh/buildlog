@@ -9,6 +9,7 @@ const getBaseUrl = () => {
 
 const apiClient = axios.create({
   baseURL: getBaseUrl(),
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },

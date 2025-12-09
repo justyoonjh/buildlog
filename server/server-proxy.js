@@ -42,6 +42,33 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
+// --- Session Configuration ---
+const session = require('express-session');
+const SQLiteStore = require('connect-sqlite3')(session);
+
+app.use(session({
+  store: new SQLiteStore({ db: 'sessions.db', dir: './data' }),
+  secret: 'your-secret-key-change-this-in-env', // TODO: Move to .env
+  resave: false,
+  saveUninitialized: false, // Don't create session until something is stored
+  cookie: {
+    secure: false, // Set to true if using HTTPS
+    httpOnly: true, // Prevents client-side JS from reading the cookie
+    maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+    sameSite: 'lax'
+  }
+}));
+
+// Debug Middleware: Log Cookies
+app.use((req, res, next) => {
+  console.log('--- Request Debug ---');
+  console.log('URL:', req.url);
+  console.log('Session ID:', req.sessionID);
+  console.log('Session:', req.session);
+  console.log('Cookies:', req.headers.cookie);
+  next();
+});
+
 // --- Routes ---
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api', require('./routes/external'));
