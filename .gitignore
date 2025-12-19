@@ -12,6 +12,17 @@ dist
 dist-ssr
 *.local
 
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Database (Render ephemeral workaround)
+data/*.sqlite
+data/*.db
+data/*.json
+!data/users.json  # users.json SHOULD be committed now for functionality
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
