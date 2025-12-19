@@ -3,7 +3,9 @@ import axios from 'axios';
 const getBaseUrl = () => {
   // 1. Environment Variable (Highest Priority)
   if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
+    const url = import.meta.env.VITE_API_URL;
+    // user provided URL might miss /api suffix
+    return url.endsWith('/api') ? url : `${url}/api`;
   }
 
   // 2. Production Fallback
