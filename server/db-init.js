@@ -47,6 +47,9 @@ const initDatabase = () => {
       modelImage TEXT,
       generatedImage TEXT,
       styleDescription TEXT,
+      downPayment INTEGER DEFAULT 0,
+      progressPayment INTEGER DEFAULT 0,
+      balancePayment INTEGER DEFAULT 0,
       createdAt INTEGER,
       updatedAt INTEGER,
       FOREIGN KEY(userId) REFERENCES users(id)
@@ -63,6 +66,18 @@ const initDatabase = () => {
       unitPrice INTEGER,
       amount INTEGER,
       FOREIGN KEY(estimateId) REFERENCES estimates(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS construction_stages (
+      id TEXT PRIMARY KEY,
+      projectId TEXT,
+      name TEXT,
+      manager TEXT,
+      duration TEXT,
+      description TEXT,
+      status TEXT DEFAULT 'pending',
+      createdAt INTEGER,
+      FOREIGN KEY(projectId) REFERENCES estimates(id) ON DELETE CASCADE
     );
 
     CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
@@ -87,6 +102,18 @@ const initDatabase = () => {
     if (!columnNames.includes('styleDescription')) {
       console.log('Migrating: Adding styleDescription to estimates table...');
       db.exec('ALTER TABLE estimates ADD COLUMN styleDescription TEXT');
+    }
+    if (!columnNames.includes('downPayment')) {
+      console.log('Migrating: Adding downPayment to estimates table...');
+      db.exec('ALTER TABLE estimates ADD COLUMN downPayment INTEGER DEFAULT 0');
+    }
+    if (!columnNames.includes('progressPayment')) {
+      console.log('Migrating: Adding progressPayment to estimates table...');
+      db.exec('ALTER TABLE estimates ADD COLUMN progressPayment INTEGER DEFAULT 0');
+    }
+    if (!columnNames.includes('balancePayment')) {
+      console.log('Migrating: Adding balancePayment to estimates table...');
+      db.exec('ALTER TABLE estimates ADD COLUMN balancePayment INTEGER DEFAULT 0');
     }
   } catch (err) {
     console.error('Schema migration failed:', err);

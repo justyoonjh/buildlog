@@ -49,31 +49,31 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 const session = require('express-session');
 const SQLiteStore = require('connect-sqlite3')(session);
 
-// app.use(session({
-//   store: new SQLiteStore({ db: 'sessions.db', dir: './data' }),
-//   secret: config.SESSION_SECRET,
-//   resave: false,
-//   saveUninitialized: false, 
-//   cookie: {
-//     secure: config.NODE_ENV === 'production', 
-//     httpOnly: true, 
-//     maxAge: 1000 * 60 * 60 * 24 * 7, 
-//     sameSite: 'lax'
-//   }
-// }));
-
-// Temporary MemoryStore for debugging
 app.use(session({
-  name: 'gongsa.sid', // Force new cookie
+  store: new SQLiteStore({ db: 'sessions.db', dir: './data' }),
   secret: config.SESSION_SECRET,
   resave: false,
-  saveUninitialized: true, // Ensure cookie is always set
+  saveUninitialized: false,
   cookie: {
     secure: config.NODE_ENV === 'production',
     httpOnly: true,
-    maxAge: 1000 * 60 * 60 * 24 // 1 day
+    maxAge: 1000 * 60 * 60 * 24 * 7,
+    sameSite: 'lax'
   }
 }));
+
+// Temporary MemoryStore for debugging (DISABLED)
+// app.use(session({
+//   name: 'gongsa.sid', // Force new cookie
+//   secret: config.SESSION_SECRET,
+//   resave: false,
+//   saveUninitialized: true, // Ensure cookie is always set
+//   cookie: {
+//     secure: config.NODE_ENV === 'production',
+//     httpOnly: true,
+//     maxAge: 1000 * 60 * 60 * 24 // 1 day
+//   }
+// }));
 
 app.use((req, res, next) => {
   console.log(`[Session Debug] ${req.method} ${req.url} | SessionID: ${req.sessionID} | User: ${req.session?.user?.id || 'None'}`);
@@ -83,6 +83,8 @@ app.use((req, res, next) => {
 // --- Routes ---
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/estimates', require('./routes/estimates'));
+app.use('/api/stages', require('./routes/stages'));
+app.use('/api/ai', require('./routes/ai'));
 app.use('/api', require('./routes/external'));
 
 // --- Global Error Handler ---

@@ -73,6 +73,7 @@ const reset = () => {
   const cleanup = db.transaction(() => {
     // Delete dependent data explicitly to avoid FK issues
     try {
+      db.prepare('DELETE FROM construction_stages').run();
       db.prepare('DELETE FROM estimate_items').run();
       db.prepare('DELETE FROM estimates').run();
       db.prepare('DELETE FROM users').run();

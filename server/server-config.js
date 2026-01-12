@@ -7,7 +7,8 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(3001),
   SESSION_SECRET: z.string().min(1, 'SESSION_SECRET is required'),
   JUSO_API_KEY: z.string().optional(), // Using optional to prevent startup crash if not set, but warned below
-  NTS_API_KEY: z.string().min(1, 'NTS_API_KEY is required')
+  NTS_API_KEY: z.string().min(1, 'NTS_API_KEY is required'),
+  GEMINI_API_KEY: z.string().optional(), // Use optional to avoid crash if not using AI features immediately
 });
 
 // Validate process.env
@@ -29,6 +30,7 @@ module.exports = {
   NODE_ENV: config.NODE_ENV,
   PORT: config.PORT,
   SESSION_SECRET: config.SESSION_SECRET,
+  GEMINI_API_KEY: config.GEMINI_API_KEY || config.VITE_GEMINI_API_KEY || '', // Fallback to VITE_ key if shared .env
   JUSO: {
     API_KEY: config.JUSO_API_KEY || '',
     API_URL: 'https://business.juso.go.kr/addrlink/addrLinkApi.do'

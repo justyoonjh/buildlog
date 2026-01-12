@@ -49,3 +49,12 @@ export interface Schedule {
   type: 'work' | 'check' | 'material';
   date: string; // YYYY-MM-DD
 }
+
+export interface ConstructionStage {
+  id: string;
+  name: string;
+  manager: string;
+  duration: string;
+  description: string;
+  status: 'pending' | 'in_progress' | 'completed';
+}

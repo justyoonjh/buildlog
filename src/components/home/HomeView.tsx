@@ -7,6 +7,7 @@ import { UserProfileModal } from './UserProfileModal';
 import { BusinessInfoModal } from './BusinessInfoModal';
 import { ProjectView } from '../project/ProjectView';
 import apiClient from '../../services/apiClient';
+import { AnalysisView } from '../analysis/AnalysisView';
 
 export const HomeView: React.FC = () => {
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
@@ -87,9 +88,7 @@ export const HomeView: React.FC = () => {
         )}
 
         {activeTab === 'analysis' && (
-          <div className="flex-1 flex items-center justify-center text-slate-400">
-            분석 화면 준비 중입니다.
-          </div>
+          <AnalysisView />
         )}
       </main>
 

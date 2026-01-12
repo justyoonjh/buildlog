@@ -34,7 +34,11 @@ export const EstimateForm: React.FC<EstimateFormProps> = ({ onBack, onComplete, 
     // AI Model (Step 3)
     modelImage: initialData?.modelImage || null,
     generatedImage: initialData?.generatedImage || null,
-    styleDescription: initialData?.styleDescription || ''
+    styleDescription: initialData?.styleDescription || '',
+    // Payment Terms (Step 4)
+    downPayment: initialData?.downPayment || 0,
+    progressPayment: initialData?.progressPayment || 0,
+    balancePayment: initialData?.balancePayment || 0,
   });
 
   const updateField = (field: string, value: any) => {
@@ -79,18 +83,21 @@ export const EstimateForm: React.FC<EstimateFormProps> = ({ onBack, onComplete, 
         status: status
       };
 
+      let savedEstimate;
       if (initialData?.id) {
-        await apiClient.put(`/estimates/${initialData.id}`, payload);
+        const res = await apiClient.put(`/estimates/${initialData.id}`, payload);
+        savedEstimate = res.data.estimate;
       } else {
-        await apiClient.post('/estimates', payload);
+        const res = await apiClient.post('/estimates', payload);
+        savedEstimate = res.data.estimate;
       }
 
       if (status === 'negotiating') {
         alert('저장되었습니다. (견적 진행 중)');
-        onComplete({ ...payload, status: 'negotiating' });
+        onComplete(savedEstimate);
       } else if (status === 'contracted') {
         alert('계약이 완료되었습니다! (시공 탭으로 이동)');
-        onComplete({ ...payload, status: 'contracted' });
+        onComplete(savedEstimate);
       }
     } catch (error) {
       console.error('Save failed:', error);
@@ -202,7 +209,11 @@ export const EstimateForm: React.FC<EstimateFormProps> = ({ onBack, onComplete, 
         )}
         {currentStep === 4 && (
           <StepContract
-            data={{ ...formData, totalAmount: formData.items.reduce((sum: number, item: any) => sum + item.amount, 0) }}
+            data={{
+              ...formData,
+              totalAmount: formData.items.reduce((sum: number, item: any) => sum + item.amount, 0)
+            }}
+            onPaymentChange={(field, value) => updateField(field, value)}
             onSignChange={setIsSigned}
           />
         )}

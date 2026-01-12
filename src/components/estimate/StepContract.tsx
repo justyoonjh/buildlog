@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { FileSignature, CheckCircle, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { FileSignature, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 
 interface StepContractProps {
   data: {
@@ -11,19 +11,41 @@ interface StepContractProps {
     totalAmount: number;
     vatIncluded: boolean;
     items: any[];
+    downPayment: number;
+    progressPayment: number;
+    balancePayment: number;
   };
+  onPaymentChange: (field: string, value: number) => void;
   onSignChange: (signed: boolean) => void;
 }
 
-export const StepContract: React.FC<StepContractProps> = ({ data, onSignChange }) => {
+export const StepContract: React.FC<StepContractProps> = ({ data, onPaymentChange, onSignChange }) => {
   const [agreed, setAgreed] = useState(false);
+
+  // Initialize Payment Terms if empty
+  useEffect(() => {
+    if (data.totalAmount > 0 && data.downPayment === 0 && data.progressPayment === 0 && data.balancePayment === 0) {
+      handleAutoCalculate();
+    }
+  }, [data.totalAmount]); // Run when totalAmount changes or on mount
+
+  const handleAutoCalculate = () => {
+    const total = data.totalAmount;
+    const down = Math.round(total * 0.1);      // 10%
+    const progress = Math.round(total * 0.4);  // 40%
+    const balance = total - down - progress;   // Remainder (approx 50%)
+
+    onPaymentChange('downPayment', down);
+    onPaymentChange('progressPayment', progress);
+    onPaymentChange('balancePayment', balance);
+  };
 
   const handleAgree = (checked: boolean) => {
     setAgreed(checked);
     onSignChange(checked);
   };
 
-  const formatNumber = (num: number) => num.toLocaleString();
+  const formatNumber = (num: number) => num ? num.toLocaleString() : '0';
 
   // Calculate generic terms
   const today = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -40,9 +62,9 @@ export const StepContract: React.FC<StepContractProps> = ({ data, onSignChange }
 4. 도급금액 : 일금 ${formatNumber(data.totalAmount)}원정 (${data.vatIncluded ? '부가세 포함' : '부가세 별도'})
 
 제 3 조 (대금 지급)
-1. 계약금 : 착수 시 도급금액의 10%
-2. 중도금 : 공사 50% 진행 시 도급금액의 40%
-3. 잔금 : 공사 완료 및 검수 후 50%
+1. 계약금 (착수 시) : 일금 ${formatNumber(data.downPayment)}원
+2. 중도금 (공사 진행 중) : 일금 ${formatNumber(data.progressPayment)}원
+3. 잔금 (공사 완료 시) : 일금 ${formatNumber(data.balancePayment)}원
 
 제 4 조 (공사의 변경)
 "갑"의 요청에 의해 공사 내용이 변경되거나 추가될 경우, "갑"과 "을"은 협의하여 공사비와 공사기간을 조정할 수 있다.
@@ -58,7 +80,56 @@ export const StepContract: React.FC<StepContractProps> = ({ data, onSignChange }
           <FileSignature size={16} className="text-orange-600" />
           표준 공사 계약서 검토
         </div>
-        작성된 견적 내용을 바탕으로 생성된 계약서입니다. 내용을 확인 후 서명해 주세요.
+        작성된 견적 내용을 바탕으로 생성된 계약서입니다. 대금 지급 조건을 확인하고 조정하세요.
+      </div>
+
+      {/* Payment Terms Input */}
+      <div className="bg-white border boundary-slate-200 rounded-xl p-5 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-bold text-slate-800 text-sm">대금 지급 조건 설정</h3>
+          <button
+            onClick={handleAutoCalculate}
+            className="flex items-center gap-1 text-xs text-blue-600 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
+          >
+            <RefreshCw size={12} />
+            표준 비율(10/40/50) 자동계산
+          </button>
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">계약금 (선금)</label>
+            <input
+              type="number"
+              value={data.downPayment}
+              onChange={(e) => onPaymentChange('downPayment', Number(e.target.value))}
+              className="w-full p-2 border border-slate-200 rounded-lg text-sm text-right font-medium"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">중도금 (진행)</label>
+            <input
+              type="number"
+              value={data.progressPayment}
+              onChange={(e) => onPaymentChange('progressPayment', Number(e.target.value))}
+              className="w-full p-2 border border-slate-200 rounded-lg text-sm text-right font-medium"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">잔금 (완료)</label>
+            <input
+              type="number"
+              value={data.balancePayment}
+              onChange={(e) => onPaymentChange('balancePayment', Number(e.target.value))}
+              className="w-full p-2 border border-slate-200 rounded-lg text-sm text-right font-medium"
+            />
+          </div>
+        </div>
+        <div className="mt-2 text-right text-xs">
+          <span className={`${(data.downPayment + data.progressPayment + data.balancePayment) === data.totalAmount ? 'text-green-600' : 'text-red-500'}`}>
+            합계: {formatNumber(data.downPayment + data.progressPayment + data.balancePayment)}원
+            / 총액: {formatNumber(data.totalAmount)}원
+          </span>
+        </div>
       </div>
 
       {/* Contract Paper UI */}
