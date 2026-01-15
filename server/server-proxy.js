@@ -10,6 +10,8 @@ const express = require('express');
 const cors = require('cors');
 const config = require('./server-config');
 
+const fs = require('fs');
+const path = require('path');
 const app = express();
 
 // --- CORS Configuration ---
@@ -49,8 +51,18 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 const session = require('express-session');
 const SQLiteStore = require('connect-sqlite3')(session);
 
+// Ensure data directory exists for sessions.db
+const dataDir = path.join(__dirname, '../data');
+if (!fs.existsSync(dataDir)) {
+  console.log('Creating data directory:', dataDir);
+  fs.mkdirSync(dataDir, { recursive: true });
+}
+
 app.use(session({
-  store: new SQLiteStore({ db: 'sessions.db', dir: './data' }),
+  store: new SQLiteStore({
+    db: 'sessions.db',
+    dir: dataDir
+  }),
   secret: config.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
