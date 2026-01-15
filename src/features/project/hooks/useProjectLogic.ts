@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '@/services/apiClient';
 import { Estimate, Tab, EstimatesResponse, EstimateDetailResponse } from '@/types';
+import { QUERY_KEYS } from '@/shared/constants/queryKeys';
 
 export const useProjectLogic = (initialProjectId?: string, initialTab?: Tab) => {
   const queryClient = useQueryClient();
@@ -14,7 +15,7 @@ export const useProjectLogic = (initialProjectId?: string, initialTab?: Tab) => 
 
   // React Query: Fetch Estimates
   const { data: estimates = [], isLoading } = useQuery({
-    queryKey: ['estimates'],
+    queryKey: QUERY_KEYS.estimates.all,
     queryFn: async () => {
       const res = await apiClient.get<EstimatesResponse>('/estimates');
       return res.data.success ? res.data.estimates : [];
@@ -24,7 +25,7 @@ export const useProjectLogic = (initialProjectId?: string, initialTab?: Tab) => 
 
   // Manual refetch wrapper (to keep API consistent with view)
   const fetchEstimates = async () => {
-    await queryClient.invalidateQueries({ queryKey: ['estimates'] });
+    await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.estimates.all });
   };
 
   useEffect(() => {

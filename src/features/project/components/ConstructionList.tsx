@@ -1,6 +1,6 @@
 import React from 'react';
 import { ProjectCard } from './ProjectCard';
-import { EmptyState } from '@/components/ui/EmptyState';
+import { EmptyState } from '@/shared/components/ui/EmptyState';
 import { Estimate } from '@/types';
 
 interface ConstructionListProps {

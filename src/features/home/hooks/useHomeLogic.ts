@@ -28,7 +28,8 @@ export const useHomeLogic = () => {
   const navigate = useNavigate();
 
   const handleProjectClick = (projectId: string) => {
-    navigate(`/projects/${projectId}`);
+    setActiveTab('project');
+    setTargetProjectId(projectId);
   };
 
   return {

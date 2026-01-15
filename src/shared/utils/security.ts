@@ -47,52 +47,7 @@ export const analyzePassword = (password: string, email: string): PasswordStreng
   return 'normal';
 };
 
-// Simulate PBKDF2 Hashing with Fallback for Non-Secure Contexts (Fixing Error B)
-export const hashPassword = async (password: string): Promise<{ hash: string; salt: string }> => {
-  try {
-    if (window.crypto && window.crypto.subtle) {
-      const encoder = new TextEncoder();
-      const saltBytes = crypto.getRandomValues(new Uint8Array(16));
-      const salt = Array.from(saltBytes).map(b => b.toString(16).padStart(2, '0')).join('');
-
-      const keyMaterial = await crypto.subtle.importKey(
-        "raw",
-        encoder.encode(password),
-        { name: "PBKDF2" },
-        false,
-        ["deriveBits", "deriveKey"]
-      );
-
-      const key = await crypto.subtle.deriveKey(
-        {
-          name: "PBKDF2",
-          salt: saltBytes,
-          iterations: 100000,
-          hash: "SHA-256"
-        },
-        keyMaterial,
-        { name: "AES-GCM", length: 256 },
-        true,
-        ["encrypt", "decrypt"]
-      );
-
-      const exported = await crypto.subtle.exportKey("raw", key);
-      const hash = Array.from(new Uint8Array(exported)).map(b => b.toString(16).padStart(2, '0')).join('');
-
-      return { hash, salt };
-    }
-  } catch (e) {
-    console.warn("Secure hashing failed, falling back to demo hashing.", e);
-  }
-
-  // --- Fallback for Insecure Contexts (Error B Solution) ---
-  // This ensures the app doesn't crash on http:// or non-localhost
-  console.log("Using Fallback (Demo) Hashing");
-  const fallbackSalt = Math.random().toString(36).substring(2, 15);
-  // Simple pseudo-hash for demo only: Base64(password + salt)
-  const fallbackHash = btoa(password + fallbackSalt);
-  return { hash: `DEMO:${fallbackHash}`, salt: fallbackSalt };
-};
+// hashPassword removed - backend handles hashing now
 
 // Verify Password with support for both Secure and Fallback hashes
 export const verifyPassword = async (password: string, storedHash: string, storedSalt: string): Promise<boolean> => {

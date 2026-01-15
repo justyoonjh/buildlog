@@ -33,3 +33,6 @@ data/*.json
 *.njsproj
 *.sln
 *.sw?
+
+*storybook.log
+storybook-static

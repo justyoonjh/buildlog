@@ -38,32 +38,35 @@ export const LoginForm: React.FC = () => {
 
     // Attempt Login via Store
     try {
-      const result = await authService.login(trimmedId, password);
-      if (result) {
-        login(result);
-        // Clear attempts on success
-        const newAttempts = { ...loginAttempts };
-        delete newAttempts[trimmedId];
-        setLoginAttempts(newAttempts);
+      const user = await authService.login(trimmedId, password);
+      // If successful (no error thrown)
+      login(user);
+      // Clear attempts on success
+      const newAttempts = { ...loginAttempts };
+      delete newAttempts[trimmedId];
+      setLoginAttempts(newAttempts);
+
+    } catch (err: any) {
+      // Handle ApiError response
+      const errorCode = err.code;
+      const errorMessage = err.message;
+
+      const newAttempts = { ...loginAttempts };
+      const currentCount = (newAttempts[trimmedId]?.count || 0) + 1;
+      let lockTime: number | null = null;
+
+      if (currentCount > 5) {
+        lockTime = Date.now() + 30 * 60 * 1000;
+        setLocalError('비밀번호를 5회 이상 틀려 30분간 접속이 제한됩니다.');
       } else {
-        const newAttempts = { ...loginAttempts };
-        const currentCount = (newAttempts[trimmedId]?.count || 0) + 1;
-        let lockTime: number | null = null;
-
-        if (currentCount > 5) {
-          lockTime = Date.now() + 30 * 60 * 1000;
-          setLocalError('비밀번호를 5회 이상 틀려 30분간 접속이 제한됩니다.');
-        } else {
-          setLocalError('아이디 또는 비밀번호가 올바르지 않습니다.');
-        }
-
-        setLoginAttempts({
-          ...newAttempts,
-          [trimmedId]: { count: currentCount, lockUntil: lockTime }
-        });
+        // Use backend message if available, or fallback
+        setLocalError(errorMessage || '아이디 또는 비밀번호가 올바르지 않습니다.');
       }
-    } catch (err) {
-      setLocalError('로그인 중 오류가 발생했습니다.');
+
+      setLoginAttempts({
+        ...newAttempts,
+        [trimmedId]: { count: currentCount, lockUntil: lockTime }
+      });
     } finally {
       setIsSubmitting(false);
     }

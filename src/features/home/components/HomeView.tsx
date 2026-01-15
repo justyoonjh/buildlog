@@ -4,7 +4,7 @@ import { BottomNavigation } from './BottomNavigation';
 import { UserProfileModal } from './UserProfileModal';
 import { BusinessInfoModal } from './BusinessInfoModal';
 import { ProjectView } from '@/features/project/components/ProjectView';
-import { PortfolioView } from '@/components/portfolio/PortfolioView';
+import { PortfolioView } from '@/features/portfolio/components/PortfolioView';
 import { ConsultationModal } from './ConsultationModal';
 import { useHomeLogic } from '@/features/home/hooks/useHomeLogic';
 import { HomeDashboard } from './HomeDashboard';

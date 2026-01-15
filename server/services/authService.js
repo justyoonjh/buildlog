@@ -1,5 +1,6 @@
 const argon2 = require('argon2');
 const db = require('../server-db');
+const ApiError = require('../utils/ApiError');
 
 class AuthService {
   /**
@@ -10,7 +11,7 @@ class AuthService {
       return await argon2.hash(password);
     } catch (err) {
       console.error('Hashing failed:', err);
-      throw new Error('Hashing failed');
+      throw new ApiError(500, '비밀번호 암호화 실패', 'HASH_FAILED');
     }
   }
 
@@ -41,7 +42,7 @@ class AuthService {
 
     // Check duplicate
     if (await this.findUserById(id)) {
-      throw new Error('User already exists');
+      throw new ApiError(409, '이미 존재하는 아이디입니다.', 'USER_EXISTS');
     }
 
     const hash = await this.hashPassword(password);
@@ -67,19 +68,15 @@ class AuthService {
    * Login a user
    */
   async login(id, password) {
-    // 1. Hardcoded Admin Check REMOVED
-    // Security Fix: Admin must exist in database
-
-
-    // 2. Database User Check
+    // 1. Database User Check
     const user = await this.findUserById(id);
     if (!user) {
-      throw new Error('Invalid credentials');
+      throw new ApiError(401, '아이디 또는 비밀번호가 올바르지 않습니다.', 'AUTH_FAILED');
     }
 
     const isValid = await this.verifyPassword(password, user.passwordHash);
     if (!isValid) {
-      throw new Error('Invalid credentials');
+      throw new ApiError(401, '아이디 또는 비밀번호가 올바르지 않습니다.', 'AUTH_FAILED');
     }
 
     const { passwordHash, ...safeUser } = user;

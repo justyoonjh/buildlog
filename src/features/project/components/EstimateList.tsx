@@ -1,7 +1,7 @@
 import React from 'react';
 import { ProjectCard } from '@/features/project/components/ProjectCard';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { Skeleton } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/shared/components/ui/EmptyState';
+import { Skeleton } from '@/shared/components/ui/Skeleton';
 import { Plus } from 'lucide-react';
 import { Estimate } from '@/types';
 

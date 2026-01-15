@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Check, Building2, User, Lock, Phone, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { hashPassword, analyzePassword, PasswordStrength } from '@/utils/security';
+import { Button } from '@/shared/components/ui/Button';
+import { Input } from '@/shared/components/ui/Input';
+import { analyzePassword, PasswordStrength } from '@/shared/utils/security';
 import { authService } from '@/features/auth/services/authService';
 
 interface EmployeeSignupFormProps {

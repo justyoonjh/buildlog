@@ -2,20 +2,24 @@ import apiClient from '@/services/apiClient';
 import { User, BusinessInfo } from '@/types';
 
 export const authService = {
-  async login(id: string, password: string): Promise<User | null> {
+  async login(id: string, password: string): Promise<User> {
     try {
       const response = await apiClient.post('/auth/login', { id, password });
       if (response.data.success) {
         return response.data.user;
       }
-      return null;
-    } catch (error) {
+      throw new Error(response.data.message || '로그인 실패');
+    } catch (error: any) {
       console.error('Login error:', error);
+      // Pass the error object correctly to the component
+      if (error.response && error.response.data) {
+        throw error.response.data; // { success: false, message: '...', code: '...' }
+      }
       throw error;
     }
   },
 
-  async register(user: any): Promise<{ success: boolean; companyCode?: string }> {
+  async register(user: any): Promise<{ success: boolean; companyCode?: string; message?: string }> {
     try {
       const response = await apiClient.post('/auth/register', {
         id: user.id,
@@ -34,10 +38,11 @@ export const authService = {
           companyCode: response.data.companyCode
         };
       }
-      return { success: response.data.success };
-    } catch (error) {
+      return { success: false, message: response.data.message };
+    } catch (error: any) {
       console.error('Register error:', error);
-      return { success: false };
+      const msg = error.response?.data?.message || '회원가입 중 오류가 발생했습니다.';
+      return { success: false, message: msg };
     }
   },
 

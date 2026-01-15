@@ -1,4 +1,4 @@
-import React from 'react';
+import { LazyImage } from '@/shared/components/ui/LazyImage';
 
 interface ConstructionModelingViewProps {
   project: any;
@@ -14,10 +14,10 @@ export const ConstructionModelingView: React.FC<ConstructionModelingViewProps> =
         </h3>
         {project.generatedImage || project.modelImage ? (
           <div className="rounded-lg overflow-hidden border border-slate-200">
-            <img
+            <LazyImage
               src={project.generatedImage || project.modelImage}
               alt="모델링 이미지"
-              className="w-full h-auto object-cover"
+              className="w-full h-auto aspect-video"
             />
           </div>
         ) : (

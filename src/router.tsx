@@ -1,8 +1,8 @@
 import React, { Suspense, lazy } from 'react';
 import { createBrowserRouter, useParams, useNavigate } from 'react-router-dom';
 import { ProtectedRoute, PublicRoute } from '@/features/auth/components/RouteGuards';
-import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
-import { Loading } from '@/components/ui/Loading';
+import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
+import { Loading } from '@/shared/components/ui/Loading';
 import { AuthLayout } from '@/components/layout/AuthLayout';
 import { useLogin } from '@/features/auth/hooks/useLogin';
 

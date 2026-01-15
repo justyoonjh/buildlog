@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, Check, AlertCircle, ShieldCheck, ShieldAlert, Upload, Camera, FileText, Loader2, MapPin, Search, X, CheckCircle2, Copy, AlertTriangle, XCircle, User, Lock, Phone, Building2 } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { analyzePassword, hashPassword, PasswordStrength, logSystemError, generateCompanyCode } from '@/utils/security';
-import { extractBusinessInfo, validateBusinessWithNTS } from '@/utils/businessCert';
-import { validateImageMiddleware } from '@/utils/imageSecurity';
-import { searchAddress, Juso } from '@/utils/addressApi';
+import { Button } from '@/shared/components/ui/Button';
+import { Input } from '@/shared/components/ui/Input';
+import { analyzePassword, PasswordStrength, logSystemError, generateCompanyCode } from '@/shared/utils/security';
+import { extractBusinessInfo, validateBusinessWithNTS } from '@/features/auth/utils/businessCert';
+import { validateImageMiddleware } from '@/shared/utils/imageSecurity';
+import { searchAddress, Juso } from '@/shared/services/addressApi';
 import { authService } from '@/features/auth/services/authService';
 
 import { toast } from 'react-hot-toast';

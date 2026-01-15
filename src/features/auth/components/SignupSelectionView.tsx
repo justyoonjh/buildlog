@@ -1,6 +1,6 @@
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/shared/components/ui/Button';
 
 interface SignupSelectionViewProps {
   onSelectBoss: () => void;
