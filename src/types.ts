@@ -58,3 +58,55 @@ export interface ConstructionStage {
   description: string;
   status: 'pending' | 'in_progress' | 'completed';
 }
+
+export type Tab = 'consultation' | 'estimate' | 'contract' | 'construction' | 'completed';
+
+export interface EstimateItem {
+  id?: number;
+  category: string;
+  description: string;
+  spec: string;
+  quantity: number;
+  unit: string;
+  unitPrice: number;
+  amount: number;
+}
+
+export interface Estimate {
+  id: string;
+  userId?: string;
+  clientName: string;
+  clientPhone: string;
+  siteAddress: string;
+  startDate: string; // YYYY-MM-DD
+  endDate: string;   // YYYY-MM-DD
+  status: string; // 'consultation' | 'negotiating' | 'contract_ready' | 'contracted' | 'construction' | 'completed'
+  totalAmount: number;
+  vatIncluded: number; // 1 or 0
+  memo?: string;
+  items?: EstimateItem[];
+  modelImage?: string;
+  generatedImage?: string;
+  styleDescription?: string;
+  downPayment?: number;
+  progressPayment?: number;
+  balancePayment?: number;
+  createdAt: number;
+  updatedAt?: number;
+}
+
+export interface ApiResponse<T = any> {
+  success: boolean;
+  message?: string;
+  estimates?: T; // Flexible for list responses
+  estimate?: T;  // Flexible for single item responses
+  [key: string]: any;
+}
+
+export interface EstimatesResponse extends ApiResponse {
+  estimates: Estimate[];
+}
+
+export interface EstimateDetailResponse extends ApiResponse {
+  estimate: Estimate;
+}

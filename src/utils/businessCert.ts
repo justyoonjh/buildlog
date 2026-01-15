@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import apiClient from '../services/apiClient';
+import apiClient from '@/services/apiClient';
 
 export interface BusinessInfo {
   b_no: string;

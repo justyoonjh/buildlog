@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { TrendingUp, Users, DollarSign, Briefcase, ChevronRight, Activity } from 'lucide-react';
-import apiClient from '../../services/apiClient';
+import apiClient from '@/services/apiClient';
 
 export const AnalysisView: React.FC = () => {
   const [loading, setLoading] = useState(true);

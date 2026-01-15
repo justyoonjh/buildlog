@@ -1,23 +1,20 @@
 import axios from 'axios';
+import toast from 'react-hot-toast';
+import { getEnv } from '@/config/env';
 
 const getBaseUrl = () => {
-  // 1. Production Fallback (Highest Priority for Build)
-  if (import.meta.env.PROD) {
+  const env = getEnv();
+
+  if (env.PROD) {
     return '/api';
   }
 
-  // 2. Environment Variable
-  // Only use if explicitly set and we are NOT in standard local dev where dynamic handling is better.
-  // Or just trust the user knows what they are doing.
-  // PROBLEM: User has .env with localhost, but visits via IP.
-  // FIX: In DEV, always prefer dynamic hostname to support network testing (Mobile/Tablet)
-  if (import.meta.env.DEV) {
+  if (env.DEV) {
     return `${window.location.protocol}//${window.location.hostname}:3001/api`;
   }
 
-  // Fallback for others
-  if (import.meta.env.VITE_API_URL) {
-    const url = import.meta.env.VITE_API_URL;
+  if (env.VITE_API_URL) {
+    const url = env.VITE_API_URL;
     return url.endsWith('/api') ? url : `${url}/api`;
   }
 
@@ -31,5 +28,28 @@ const apiClient = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const message = error.response?.data?.message || 'Something went wrong';
+
+    // Prevent toast on 401 (handled by auth check mostly) unless specific action
+    if (error.response?.status === 401) {
+      // Optional: toast.error('로그인이 필요합니다.');
+    } else if (error.response?.status === 403) {
+      toast.error('권한이 없습니다.');
+    } else if (error.response?.status >= 500) {
+      toast.error('서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+    } else {
+      // For general 400 errors, we might let the component handle it or show it here
+      // Let's show it if it's a specific API error message
+      if (message && message !== 'Something went wrong') {
+        toast.error(message);
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 export default apiClient;

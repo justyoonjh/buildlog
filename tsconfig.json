@@ -14,15 +14,17 @@
       "node"
     ],
     "moduleResolution": "bundler",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "src/*"
+      ]
+    },
+    "esModuleInterop": true,
     "isolatedModules": true,
     "moduleDetection": "force",
     "allowJs": true,
     "jsx": "react-jsx",
-    "paths": {
-      "@/*": [
-        "./*"
-      ]
-    },
     "allowImportingTsExtensions": true,
     "noEmit": true
   }

@@ -1,4 +1,4 @@
-import apiClient from '../services/apiClient';
+import apiClient from '@/services/apiClient';
 
 export interface Juso {
   roadAddr: string;    // Road Name Address

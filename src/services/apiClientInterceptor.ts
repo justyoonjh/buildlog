@@ -1,5 +1,5 @@
 import apiClient from './apiClient';
-import { useAuthStore } from '../stores/useAuthStore';
+import { useAuthStore } from '@/features/auth/stores/useAuthStore';
 
 let isSetup = false;
 

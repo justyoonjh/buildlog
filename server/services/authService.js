@@ -67,10 +67,9 @@ class AuthService {
    * Login a user
    */
   async login(id, password) {
-    // 1. Hardcoded Admin Check
-    if (id === 'admin' && password === 'password123!') {
-      return { id: 'admin', name: '현장 관리자', role: 'admin' };
-    }
+    // 1. Hardcoded Admin Check REMOVED
+    // Security Fix: Admin must exist in database
+
 
     // 2. Database User Check
     const user = await this.findUserById(id);

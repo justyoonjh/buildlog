@@ -43,13 +43,34 @@ const corsOptions = {
   credentials: true
 };
 
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+
+// ... (other imports)
+
+// --- Security Middleware ---
+app.use(helmet({
+  contentSecurityPolicy: false, // Disable CSP for now if it conflicts with dev tools or external images (like Gemini/Firebase)
+  crossOriginResourcePolicy: { policy: "cross-origin" } // Allow resources to be loaded
+}));
+
+// Global Rate Limiter (Basic DDoS Protection)
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 mins
+  max: 1000, // Limit each IP to 1000 requests per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' }
+});
+app.use(globalLimiter);
+
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // --- Session Configuration ---
 const session = require('express-session');
-const SQLiteStore = require('connect-sqlite3')(session);
+const BetterSqliteStore = require('./session-store')(session);
 
 // Ensure data directory exists for sessions.db
 const dataDir = path.join(__dirname, '../data');
@@ -59,9 +80,8 @@ if (!fs.existsSync(dataDir)) {
 }
 
 app.use(session({
-  store: new SQLiteStore({
-    db: 'sessions.db',
-    dir: dataDir
+  store: new BetterSqliteStore({
+    dbPath: path.join(dataDir, 'sessions.db'),
   }),
   secret: config.SESSION_SECRET,
   resave: false,
@@ -87,10 +107,13 @@ app.use(session({
 //   }
 // }));
 
-app.use((req, res, next) => {
-  console.log(`[Session Debug] ${req.method} ${req.url} | SessionID: ${req.sessionID} | User: ${req.session?.user?.id || 'None'}`);
-  next();
-});
+// Debugging middleware (Development only)
+if (config.NODE_ENV !== 'production') {
+  app.use((req, res, next) => {
+    console.log(`[Session Debug] ${req.method} ${req.url} | SessionID: ${req.sessionID} | User: ${req.session?.user?.id || 'None'}`);
+    next();
+  });
+}
 
 // --- Routes ---
 app.use('/api/auth', require('./routes/auth'));

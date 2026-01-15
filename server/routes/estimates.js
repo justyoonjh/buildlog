@@ -1,52 +1,24 @@
 const express = require('express');
 const router = express.Router();
-const estimateService = require('../services/estimateService');
-const catchAsync = require('../utils/catchAsync');
-const AppError = require('../utils/AppError');
-
+const estimateController = require('../controllers/estimateController');
+const verifyEstimateOwner = require('../middleware/verifyEstimateOwner');
 const requireAuth = require('../middleware/auth');
 
 router.use(requireAuth);
 
-// Create Draft Estimate
-router.post('/', catchAsync(async (req, res) => {
-  const userId = req.session.user.id;
-  const estimate = await estimateService.createEstimate(req.body, userId);
-  res.status(201).json({ success: true, estimate });
-}));
+const { validateRequest } = require('../middleware/validateRequest');
+const { createEstimateSchema, updateEstimateSchema } = require('../validations/schemas');
 
-// Get My Estimates
-router.get('/', catchAsync(async (req, res) => {
-  const userId = req.session.user.id;
-  const estimates = await estimateService.getEstimatesByUser(userId);
-  res.json({ success: true, estimates });
-}));
+// Routes without ID
+router.post('/', validateRequest(createEstimateSchema), estimateController.createEstimate);
+router.get('/', estimateController.getMyEstimates);
 
-// Get Single Estimate
-router.get('/:id', catchAsync(async (req, res, next) => {
-  const estimate = await estimateService.getEstimateById(req.params.id);
-  if (!estimate) {
-    return next(new AppError('Estimate not found', 404));
-  }
-  // Optional: Check if user owns this estimate
-  if (estimate.userId !== req.session.user.id) {
-    return next(new AppError('Unauthorized access to this estimate', 403));
-  }
-  res.json({ success: true, estimate });
-}));
+// Routes with ID (Apply Ownership Check Middleware)
+// Note: verifyEstimateOwner expects :id param
+router.use('/:id', verifyEstimateOwner);
 
-// Update Estimate
-router.put('/:id', catchAsync(async (req, res) => {
-  const userId = req.session.user.id;
-  const estimate = await estimateService.updateEstimate(req.params.id, req.body, userId);
-  res.json({ success: true, estimate });
-}));
-
-// Delete Estimate
-router.delete('/:id', catchAsync(async (req, res) => {
-  const userId = req.session.user.id;
-  await estimateService.deleteEstimate(req.params.id, userId);
-  res.json({ success: true, message: 'Estimate deleted' });
-}));
+router.get('/:id', estimateController.getEstimateById);
+router.put('/:id', validateRequest(updateEstimateSchema), estimateController.updateEstimate);
+router.delete('/:id', estimateController.deleteEstimate);
 
 module.exports = router;
