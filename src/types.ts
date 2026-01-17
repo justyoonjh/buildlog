@@ -32,6 +32,9 @@ export interface User {
   businessNumber?: string;
   businessInfo?: BusinessInfo;
   address?: Address;
+  status: 'pending' | 'approved' | 'rejected';
+  department?: string;
+  position?: string;
   createdAt?: number;
 }
 

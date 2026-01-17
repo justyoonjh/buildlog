@@ -11,11 +11,18 @@ export const setupInterceptors = () => {
     (response) => response,
     async (error) => {
       if (error.response && error.response.status === 401) {
+        // Skip session expiry alert for login attempts (wrong password)
+        if (error.config?.url?.includes('/login')) {
+          return Promise.reject(error);
+        }
+
         // Automatically logout on 401
         const { logout } = useAuthStore.getState();
         await logout();
-        // Optional: Alert user
+
+        // Clear local storage or session state here if needed
         alert('세션이 만료되었습니다. 다시 로그인해주세요.');
+        window.location.href = '/login';
       }
       return Promise.reject(error);
     }

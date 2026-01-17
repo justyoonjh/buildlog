@@ -29,6 +29,9 @@ const initDatabase = () => {
       businessNumber TEXT,
       businessInfo TEXT,
       address TEXT,
+      status TEXT DEFAULT 'pending',
+      department TEXT,
+      position TEXT,
       createdAt INTEGER
     );
 
@@ -115,6 +118,27 @@ const initDatabase = () => {
       console.log('Migrating: Adding balancePayment to estimates table...');
       db.exec('ALTER TABLE estimates ADD COLUMN balancePayment INTEGER DEFAULT 0');
     }
+    if (!columnNames.includes('balancePayment')) {
+      console.log('Migrating: Adding balancePayment to estimates table...');
+      db.exec('ALTER TABLE estimates ADD COLUMN balancePayment INTEGER DEFAULT 0');
+    }
+
+    // Users Table Migration
+    const userColumns = db.prepare('PRAGMA table_info(users)').all().map(c => c.name);
+    if (!userColumns.includes('status')) {
+      console.log('Migrating: Adding status to users table...');
+      db.exec("ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'approved'");
+      // Existing users are approved by default
+    }
+    if (!userColumns.includes('department')) {
+      console.log('Migrating: Adding department to users table...');
+      db.exec('ALTER TABLE users ADD COLUMN department TEXT');
+    }
+    if (!userColumns.includes('position')) {
+      console.log('Migrating: Adding position to users table...');
+      db.exec('ALTER TABLE users ADD COLUMN position TEXT');
+    }
+
   } catch (err) {
     console.error('Schema migration failed:', err);
   }

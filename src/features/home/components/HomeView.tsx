@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { HomeHeader } from './HomeHeader';
 import { BottomNavigation } from './BottomNavigation';
 import { UserProfileModal } from './UserProfileModal';
@@ -6,6 +6,7 @@ import { BusinessInfoModal } from './BusinessInfoModal';
 import { ProjectView } from '@/features/project/components/ProjectView';
 import { PortfolioView } from '@/features/portfolio/components/PortfolioView';
 import { ConsultationModal } from './ConsultationModal';
+import { CompanyInfoModal } from '@/features/company/components/CompanyInfoModal';
 import { useHomeLogic } from '@/features/home/hooks/useHomeLogic';
 import { HomeDashboard } from './HomeDashboard';
 
@@ -28,13 +29,15 @@ export const HomeView: React.FC = () => {
     setIsConsultationModalOpen
   } = useHomeLogic();
 
+  const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col relative overflow-hidden">
       {/* Header */}
       <HomeHeader
         onTodayClick={() => setSelectedDate(new Date())}
         onUserClick={() => setIsProfileOpen(true)}
-        onBusinessInfoClick={() => setIsBusinessInfoOpen(true)}
+        onBusinessInfoClick={() => setIsCompanyModalOpen(true)}
       />
 
       {/* Global Modals */}
@@ -51,6 +54,12 @@ export const HomeView: React.FC = () => {
       <ConsultationModal
         isOpen={isConsultationModalOpen}
         onClose={() => setIsConsultationModalOpen(false)}
+      />
+
+      {/* Added CompanyInfoModal */}
+      <CompanyInfoModal
+        isOpen={isCompanyModalOpen}
+        onClose={() => setIsCompanyModalOpen(false)}
       />
 
       {/* Main Content Area */}

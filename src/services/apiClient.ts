@@ -36,10 +36,13 @@ apiClient.interceptors.response.use(
 
     // Prevent toast on 401 (handled by auth check mostly) unless specific action
     if (error.response?.status === 401) {
-      // Optional: toast.error('로그인이 필요합니다.');
+      // Ignore 401 on login endpoint so the component can handle "Wrong Password"
+      if (error.config?.url?.includes('/login')) {
+        return Promise.reject(error);
+      }
+      // For other 401s, we might want to redirect or show session expired
+      // But only if we have a global handler. For now, silence is better than wrong alert.
     } else if (error.response?.status === 403) {
-      toast.error('권한이 없습니다.');
-    } else if (error.response?.status >= 500) {
       toast.error('서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
     } else {
       // For general 400 errors, we might let the component handle it or show it here

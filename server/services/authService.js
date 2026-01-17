@@ -1,6 +1,6 @@
-const argon2 = require('argon2');
 const db = require('../server-db');
 const ApiError = require('../utils/ApiError');
+const { ROLES, STATUS } = require('../constants/auth');
 
 class AuthService {
   /**
@@ -53,6 +53,8 @@ class AuthService {
       // Ensure companyName fallback logic
       companyName: rest.companyName || rest.businessInfo?.s_nm || rest.businessInfo?.c_nm || '알 수 없는 업체',
       passwordHash: hash,
+      // Default boss to approved, employees to pending
+      status: rest.role === ROLES.BOSS ? STATUS.APPROVED : STATUS.PENDING,
       createdAt: Date.now()
     };
 
@@ -83,20 +85,7 @@ class AuthService {
     return safeUser;
   }
 
-  /**
-   * Verify Company Code
-   */
-  async verifyCompanyCode(code) {
-    const boss = await db.findBossByCode(code);
-    if (boss) {
-      return {
-        valid: true,
-        companyName: boss.companyName,
-        businessInfo: boss.businessInfo
-      };
-    }
-    return { valid: false };
-  }
+
 
   /**
    * Reset Database (Dev Only)

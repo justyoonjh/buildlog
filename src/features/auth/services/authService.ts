@@ -11,6 +11,13 @@ export const authService = {
       throw new Error(response.data.message || '로그인 실패');
     } catch (error: any) {
       console.error('Login error:', error);
+
+      // If interceptor skipped it, we get the error here.
+      // Handle 401 specifically for login
+      if (error.response?.status === 401) {
+        throw new Error('아이디 또는 비밀번호가 올바르지 않습니다.');
+      }
+
       // Pass the error object correctly to the component
       if (error.response && error.response.data) {
         throw error.response.data; // { success: false, message: '...', code: '...' }
@@ -29,7 +36,9 @@ export const authService = {
         companyCode: user.companyCode,
         phone: user.phone,
         businessInfo: user.businessInfo,
-        address: user.address
+        address: user.address,
+        department: user.department,
+        position: user.position
       });
 
       if (response.data.success) {
@@ -53,6 +62,28 @@ export const authService = {
     } catch (error) {
       return null;
     }
+  },
+
+  async getCompanyMembers(companyCode: string): Promise<User[]> {
+    try {
+      const response = await apiClient.get('/auth/company/members');
+      return response.data.members;
+    } catch (error) {
+      console.error('Failed to fetch company members:', error);
+      return [];
+    }
+  },
+
+  async approveUser(userId: string): Promise<void> {
+    await apiClient.post('/auth/approve', { userId });
+  },
+
+  async rejectUser(userId: string): Promise<void> {
+    await apiClient.post('/auth/reject', { userId });
+  },
+
+  async deleteAccount(): Promise<void> {
+    await apiClient.delete('/auth/me');
   },
 
   async findBossByCompanyCode(code: string): Promise<{ businessInfo: BusinessInfo; companyName?: string } | null> {

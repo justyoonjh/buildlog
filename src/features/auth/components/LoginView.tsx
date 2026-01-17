@@ -92,9 +92,16 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSubmit, onSignupClick, i
           type="button"
           onClick={async () => {
             if (confirm('모든 데이터를 초기화하시겠습니까?')) {
-              await import('@/features/auth/services/authService').then(({ authService }) => {
-                authService.resetData();
-              });
+              try {
+                console.log('Resetting data...');
+                // Use standard import if possible, or keep dynamic if circular dep issue
+                const { authService } = await import('@/features/auth/services/authService');
+                await authService.resetData();
+                console.log('Reset command sent.');
+              } catch (e) {
+                console.error('Reset Error:', e);
+                alert('초기화 중 오류 발생: ' + e);
+              }
             }
           }}
           className="text-xs text-slate-300 hover:text-red-400 transition-colors"

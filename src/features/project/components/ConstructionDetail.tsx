@@ -6,11 +6,9 @@ import { useConstructionStages } from '@/features/project/hooks/useConstructionS
 import { ConstructionStage } from '@/types';
 
 // Sub-components
-import { ConstructionStageList } from './construction/ConstructionStageList';
-import { ConstructionStageChart } from './construction/ConstructionStageChart';
 import { ConstructionModelingView } from './construction/ConstructionModelingView';
 import { ConstructionContractView } from './construction/ConstructionContractView';
-import { StageFormModal } from './construction/StageFormModal';
+import { ConstructionOverview } from './construction/ConstructionOverview';
 
 interface ConstructionDetailProps {
   project: any;
@@ -24,19 +22,8 @@ const ConstructionDetail: React.FC<ConstructionDetailProps> = ({ project, onBack
   // Local UI State
   const [showPreview, setShowPreview] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'modeling' | 'contract'>('overview');
-  const [overviewTab, setOverviewTab] = useState<'list' | 'chart'>('list');
-  const [isAddingStage, setIsAddingStage] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
   const [aiSchedule, setAiSchedule] = useState<any[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
-
-  // Form Initial Data (derived from editingId)
-  const [formData, setFormData] = useState<Partial<ConstructionStage>>({
-    name: '',
-    manager: '',
-    duration: '',
-    description: ''
-  });
 
   const handleAiAnalysis = async () => {
     if (stages.length === 0) {
@@ -61,14 +48,13 @@ const ConstructionDetail: React.FC<ConstructionDetailProps> = ({ project, onBack
     }
   };
 
-  const handleSaveStage = async (data: Partial<ConstructionStage>) => {
+  const handleSaveStage = async (data: Partial<ConstructionStage>, id?: string | null) => {
     try {
-      if (editingId) {
-        await updateStage({ id: editingId, data });
+      if (id) {
+        await updateStage({ id, data });
       } else {
         await createStage(data);
       }
-      handleCancel();
     } catch (error) {
       console.error(error);
     }
@@ -90,31 +76,6 @@ const ConstructionDetail: React.FC<ConstructionDetailProps> = ({ project, onBack
     }
   };
 
-  const handleEditClick = (stage: ConstructionStage) => {
-    setEditingId(stage.id);
-    setFormData({
-      name: stage.name,
-      manager: stage.manager,
-      duration: stage.duration,
-      description: stage.description
-    });
-    setIsAddingStage(true);
-  };
-
-  const handleDeleteStage = async (id: string) => {
-    if (!window.confirm('이 단계를 삭제하시겠습니까?')) return;
-    try {
-      await deleteStage(id);
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  const handleCancel = () => {
-    setIsAddingStage(false);
-    setEditingId(null);
-    setFormData({ name: '', manager: '', duration: '', description: '' });
-  };
 
   const handleDelete = async () => {
     if (window.confirm('정말로 이 프로젝트를 삭제하시겠습니까?\n삭제된 데이터는 복구할 수 없습니다.')) {
@@ -191,67 +152,15 @@ const ConstructionDetail: React.FC<ConstructionDetailProps> = ({ project, onBack
 
       <div className="flex-1 overflow-y-auto p-4">
         {activeTab === 'overview' && (
-          <div className="space-y-4">
-            {/* Overview Sub-tabs */}
-            <div className="flex p-1 bg-slate-100 rounded-lg mb-4">
-              <button
-                onClick={() => setOverviewTab('list')}
-                className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${overviewTab === 'list' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'}`}
-              >
-                단계 목록
-              </button>
-              <button
-                onClick={() => setOverviewTab('chart')}
-                className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${overviewTab === 'chart' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'}`}
-              >
-                진행 시각화
-              </button>
-            </div>
-
-            {/* Header / Add Button (Only show in list mode) */}
-            {overviewTab === 'list' && (
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-bold text-slate-800">공사 단계 현황</h3>
-                <button
-                  onClick={() => {
-                    setEditingId(null);
-                    setFormData({ name: '', manager: '', duration: '', description: '' });
-                    setIsAddingStage(true);
-                  }}
-                  className="flex items-center gap-1 text-sm bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg font-medium hover:bg-blue-100 transition-colors"
-                >
-                  <Plus size={16} />
-                  단계 추가
-                </button>
-              </div>
-            )}
-
-            {/* Stages List or Chart */}
-            {overviewTab === 'list' ? (
-              <ConstructionStageList
-                stages={stages}
-                onEdit={handleEditClick}
-                onDelete={handleDeleteStage}
-                onStatusToggle={handleStatusToggle}
-              />
-            ) : (
-              <ConstructionStageChart
-                stages={stages}
-                aiSchedule={aiSchedule}
-                onGenerateAiSchedule={handleAiAnalysis}
-                isGenerating={isGenerating}
-              />
-            )}
-
-            {/* Form Modal */}
-            <StageFormModal
-              isOpen={isAddingStage}
-              onClose={handleCancel}
-              initialData={formData}
-              onSave={handleSaveStage}
-              title={editingId ? '단계 수정' : '새 단계 추가'}
-            />
-          </div>
+          <ConstructionOverview
+            stages={stages}
+            aiSchedule={aiSchedule}
+            isGenerating={isGenerating}
+            onAiAnalysis={handleAiAnalysis}
+            onSaveStage={handleSaveStage}
+            onStatusToggle={handleStatusToggle}
+            onDeleteStage={handleDeleteStage}
+          />
         )}
 
         {activeTab === 'modeling' && (

@@ -1,27 +1,22 @@
-const { GoogleGenAI, SchemaType } = require("@google/genai"); // Check import style for Node (CommonJS)
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 const config = require('../server-config');
-
-// Using the same SDK as frontend, but in CJS mode.
-// Note: @google/genai might be ESM only or dual. 
-// If require fails, might need dynamic import or check node version. 
-// Node 22 supports ESM natively, but this project mixes CJS/ESM.
-// Let's assume require works if it's a standard CJS build. 
-// If not, we might need to use the REST API directly or dynamic import.
-// Frontend used: import { GoogleGenAI } from "@google/genai";
 
 const generateSchedule = async (currentStages) => {
   if (!config.GEMINI_API_KEY) {
     throw new Error('GEMINI_API_KEY is not configured');
   }
 
-  const ai = new GoogleGenAI({ apiKey: config.GEMINI_API_KEY });
+  const genAI = new GoogleGenerativeAI(config.GEMINI_API_KEY);
+  const model = genAI.getGenerativeModel({
+    model: "gemini-1.5-flash",
+    systemInstruction: "당신은 건설 공정 전문가입니다. 주어진 정보를 바탕으로 논리적인 상세 공정표를 생성하세요."
+  });
 
   // Prepare prompt context
   const stageNames = currentStages.map(s => `${s.name} (${s.duration || '기간 미정'})`).join(', ');
   const today = new Date().toISOString().split('T')[0];
 
   const prompt = `
-    당신은 건설 공정 전문가입니다.
     다음은 주택 건설 프로젝트의 공사 단계 목록입니다:
     [${stageNames}]
 
@@ -33,49 +28,34 @@ const generateSchedule = async (currentStages) => {
     3. 각 단계의 예상 소요 기간(duration)이 "미정"이면 합리적인 기간(일수)을 할당하세요.
     4. 결과는 각 단계별로 [단계명, 시작일, 종료일, 선행작업(dependencies), 상세설명]을 포함해야 합니다.
     5. 기존 목록에 없는 필수 공정이 있다면 추가해도 좋습니다(예: 준공청소 등), 하지만 가급적 기존 목록을 유지하며 구체화해주세요.
+    
+    Output Format: JSON Array ONLY
+    Example:
+    [
+      { "name": "...", "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD", "status": "pending", "description": "..." }
+    ]
   `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash-001',
-      contents: {
-        parts: [{ text: prompt }]
-      },
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: "ARRAY",
-          items: {
-            type: "OBJECT",
-            properties: {
-              id: { type: "STRING", description: "Unique ID (can be new or match input if possible)" },
-              name: { type: "STRING" },
-              manager: { type: "STRING", description: "담당자 (없으면 '미정' 또는 적절한 직책)" },
-              startDate: { type: "STRING", description: "YYYY-MM-DD" },
-              endDate: { type: "STRING", description: "YYYY-MM-DD" },
-              status: { type: "STRING", enum: ["pending", "in_progress", "completed"] },
-              description: { type: "STRING" }
-            },
-            required: ["name", "startDate", "endDate"]
-          }
-        }
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: {
+        responseMimeType: "application/json"
       }
     });
 
-    const responseText = typeof response.text === 'function' ? response.text() : response.text;
-    if (!responseText) throw new Error("No response from AI");
+    const response = await result.response;
+    const text = response.text();
 
-    // Clean up markdown block if present (e.g. ```json ... ```)
-    const jsonString = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+    if (!text) throw new Error("No response from AI");
 
-    const schedule = JSON.parse(jsonString);
-    return schedule;
+    return JSON.parse(text);
 
   } catch (error) {
     console.error('AI Schedule Generation Error:', error);
     // Return mock data fallback if AI fails
     return [
-      { name: "착공 준비", startDate: today, endDate: today, status: "completed", description: "AI 오류로 인한 예시 데이터" },
+      { name: "착공 준비", startDate: today, endDate: today, status: "completed", description: "AI 오류로 인한 예시 데이터 (Fallback)" },
       { name: "철거 공사", startDate: today, endDate: today, status: "pending", description: "AI 서비스 연결 확인 필요" }
     ];
   }

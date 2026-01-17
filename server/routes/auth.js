@@ -19,12 +19,16 @@ router.use(authLimiter);
 const { validateRequest } = require('../middleware/validateRequest');
 const { loginSchema, registerSchema } = require('../validations/schemas');
 
-router.post('/register', validateRequest(registerSchema), authController.register);
-router.post('/login', validateRequest(loginSchema), authController.login);
+router.post('/register', authController.register);
+router.post('/login', authController.login);
 router.get('/check-id', authController.checkId);
 router.get('/verify-code', authController.verifyCode);
 router.post('/reset', authController.resetData);
+router.get('/company/members', authController.getCompanyMembers);
 router.get('/me', authController.getMe);
 router.post('/logout', authController.logout);
+router.post('/approve', authController.approveUser);
+router.post('/reject', authController.rejectUser);
+router.delete('/me', authController.deleteMe);
 
 module.exports = router;

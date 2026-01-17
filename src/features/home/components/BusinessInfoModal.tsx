@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Building2, User, Calendar, MapPin, Copy, Check } from 'lucide-react';
 import { useAuthStore } from '@/features/auth/stores/useAuthStore';
+import { ROLES } from '@/shared/constants/auth';
 
 interface BusinessInfoModalProps {
   isOpen: boolean;
@@ -81,7 +82,7 @@ export const BusinessInfoModal: React.FC<BusinessInfoModalProps> = ({ isOpen, on
           <div className="text-center pb-6 border-b border-slate-100">
             <h2 className="text-xl font-bold text-slate-900">{user.companyName || '상호명 없음'}</h2>
             <p className="text-sm text-slate-500 mt-1">
-              {user.role === 'boss' ? '관리자 (대표)' : '직원 (팀원)'}
+              {user.role === ROLES.BOSS ? '관리자 (대표)' : '직원 (팀원)'}
             </p>
           </div>
 
@@ -121,7 +122,7 @@ export const BusinessInfoModal: React.FC<BusinessInfoModalProps> = ({ isOpen, on
           </div>
 
           {/* Company Code (Only for Boss) */}
-          {user.role === 'boss' && user.companyCode && (
+          {user.role === ROLES.BOSS && user.companyCode && (
             <div className="mt-6 pt-6 border-t border-slate-100">
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
                 <span className="text-xs text-slate-500 block mb-1">직원 초대용 업체 코드</span>

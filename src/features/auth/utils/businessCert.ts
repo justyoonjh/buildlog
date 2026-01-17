@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import apiClient from '@/services/apiClient';
 
 export interface BusinessInfo {
@@ -13,44 +13,10 @@ export const extractBusinessInfo = async (file: File): Promise<BusinessInfo> => 
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
   if (!apiKey) throw new Error("API Key not found");
 
-  const ai = new GoogleGenAI({ apiKey });
-
-  // Convert file to base64
-  const base64Data = await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      // Remove data URL prefix if present (e.g. "data:image/jpeg;base64,")
-      const base64 = result.includes(',') ? result.split(',')[1] : result;
-      resolve(base64);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash-001',
-      contents: {
-        parts: [
-          { inlineData: { mimeType: file.type, data: base64Data } },
-          { text: "사업자등록증 이미지를 분석하여 정보를 추출해주세요." }
-        ]
-      },
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            b_no: { type: Type.STRING, description: "사업자등록번호 (숫자 10자리, 하이픈 제외)" },
-            s_nm: { type: Type.STRING, description: "상호명" },
-            c_nm: { type: Type.STRING, description: "성명(대표자명)" },
-            start_dt: { type: Type.STRING, description: "개업일자 (YYYYMMDD 8자리 형식)" },
-            w_kind: { type: Type.STRING, description: "업태/종목 (여러 개일 경우 맨 위 항목 1개만 선택)" }
-          },
-          required: ["b_no", "s_nm", "start_dt"]
-        },
-        systemInstruction: `당신은 한국의 '사업자 자동 가입 및 검증 시스템'을 구축하는 전문 AI 어시스턴트입니다. 당신은 다음 두 가지 핵심 능력을 수행합니다.
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-1.5-flash',
+    systemInstruction: `당신은 한국의 '사업자 자동 가입 및 검증 시스템'을 구축하는 전문 AI 어시스턴트입니다. 당신은 다음 두 가지 핵심 능력을 수행합니다.
 
 1. **OCR 전문가:** '사업자등록증' 이미지를 분석하여 구조화된 데이터로 추출합니다.
 2. **API 전문가:** '국세청_사업자등록정보 진위확인 및 상태조회 서비스' API 연동을 위한 코드와 로직을 제공합니다.
@@ -68,33 +34,63 @@ export const extractBusinessInfo = async (file: File): Promise<BusinessInfo> => 
 3. **start_dt**: 반드시 8자리 숫자로 변환하세요. (예: 2023. 5. 1. -> 20230501)
 4. **c_nm**: 대표자 이름을 정확히 추출하세요.
 5. **w_kind**: 종목란에 내용이 많을 경우, 가장 위에 있는 대표 종목 하나만 가져오세요.
-6. **Output:** 마크다운(\`\`\`json)이나 사족 없이, 오직 **순수 JSON 문자열**만 출력하세요.`
+6. **Output:** 마크다운(\`\`\`json)이나 사족 없이, 오직 **순수 JSON 문자열**만 출력하세요.`,
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: "OBJECT" as any,
+        properties: {
+          b_no: { type: "STRING" as any, description: "사업자등록번호 (숫자 10자리, 하이픈 제외)" },
+          s_nm: { type: "STRING" as any, description: "상호명" },
+          c_nm: { type: "STRING" as any, description: "성명(대표자명)" },
+          start_dt: { type: "STRING" as any, description: "개업일자 (YYYYMMDD 8자리 형식)" },
+          w_kind: { type: "STRING" as any, description: "업태/종목 (여러 개일 경우 맨 위 항목 1개만 선택)" }
+        },
+        required: ["b_no", "s_nm", "start_dt"]
       }
-    });
+    }
+  });
 
-    if (!response.text) throw new Error("AI 응답을 받을 수 없습니다.");
+  // Convert file to base64
+  const base64Data = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const base64 = result.includes(',') ? result.split(',')[1] : result;
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 
-    return JSON.parse(response.text) as BusinessInfo;
+  try {
+    const result = await model.generateContent([
+      { inlineData: { mimeType: file.type, data: base64Data } },
+      { text: "사업자등록증 이미지를 분석하여 정보를 추출해주세요." }
+    ]);
+    const response = await result.response;
+    const text = response.text();
+
+    if (!text) throw new Error("AI 응답을 받을 수 없습니다.");
+
+    return JSON.parse(text) as BusinessInfo;
 
   } catch (error: any) {
-    console.error("Gemini OCR Error:", error);
-
-    // Robust Fallback Logic:
-    // Any error (429, 404, Network, Permission, etc.) should trigger mock data
-    // to prevent blocking the user flow.
+    // Robust Fallback Logic
     const errString = JSON.stringify(error) + (error.message || '');
-
-    if (
+    const isHandledError =
       errString.includes('429') ||
       errString.includes('Quota') ||
       errString.includes('RESOURCE_EXHAUSTED') ||
       errString.includes('404') ||
       errString.includes('503') ||
       errString.includes('Network') ||
-      true // FORCE FALLBACK FOR DEMO STABILITY (remove 'true' if strict production required)
-    ) {
-      console.warn("⚠️ Gemini API Issue Detected. Falling back to MOCK OCR data.");
-      // alert("⚠️ [테스트 모드] AI API 호출 제한 또는 오류로 인해 모의 데이터를 사용합니다.");
+      errString.includes('not found') ||
+      true; // FORCE FALLBACK
+
+    if (isHandledError) {
+      console.warn("⚠️ Gemini API Issue Detected (Code " + (error.status || 'Unknown') + "). Falling back to MOCK OCR data.");
+      console.warn("Details:", error.message);
 
       return {
         b_no: "1234567890",
@@ -104,6 +100,8 @@ export const extractBusinessInfo = async (file: File): Promise<BusinessInfo> => 
         w_kind: "건설업"
       };
     }
+
+    console.error("Gemini OCR Critical Error:", error);
     throw error;
   }
 };

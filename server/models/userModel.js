@@ -1,4 +1,5 @@
 const { db, initDatabase } = require('../db-init');
+const { ROLES, STATUS } = require('../constants/auth');
 
 // Helper to parse JSON fields from DB
 const parseUser = (user) => {
@@ -36,10 +37,12 @@ const save = (user) => {
   const stmt = db.prepare(`
     INSERT OR REPLACE INTO users (
       id, passwordHash, name, role, companyCode, phone, 
-      companyName, businessNumber, businessInfo, address, createdAt
+      companyName, businessNumber, businessInfo, address, 
+      status, department, position, createdAt
     ) VALUES (
       @id, @passwordHash, @name, @role, @companyCode, @phone,
-      @companyName, @businessNumber, @businessInfo, @address, @createdAt
+      @companyName, @businessNumber, @businessInfo, @address, 
+      @status, @department, @position, @createdAt
     )
   `);
 
@@ -54,12 +57,15 @@ const save = (user) => {
     businessNumber: user.businessNumber || null,
     businessInfo: user.businessInfo ? JSON.stringify(user.businessInfo) : null,
     address: user.address ? JSON.stringify(user.address) : null,
+    status: user.status || STATUS.PENDING, // Default to pending for safety
+    department: user.department || null,
+    position: user.position || null,
     createdAt: user.createdAt || Date.now()
   });
 };
 
 const findBossByCode = (code) => {
-  const stmt = db.prepare("SELECT * FROM users WHERE role = 'boss' AND companyCode = ?");
+  const stmt = db.prepare(`SELECT * FROM users WHERE role = '${ROLES.BOSS}' AND companyCode = ?`);
   const user = stmt.get(code);
   return parseUser(user);
 };
@@ -98,9 +104,33 @@ const reset = () => {
   }
 };
 
+const findAllByCompanyCode = (code) => {
+  if (!code) return [];
+  const stmt = db.prepare(`SELECT * FROM users WHERE companyCode = ? AND status != '${STATUS.REJECTED}' ORDER BY CASE WHEN role = '${ROLES.BOSS}' THEN 0 ELSE 1 END, name ASC`);
+  const users = stmt.all(code);
+  return users.map(user => {
+    const parsed = parseUser(user);
+    // Remove sensitive data
+    if (parsed) delete parsed.passwordHash;
+    return parsed;
+  });
+};
+
+
+
+const deleteUser = (id) => {
+  // Use transaction to delete user and related data if simplified reset isn't enough
+  // For now, simple delete from users table is fine as DB reset handles cascade logic usually
+  // But given SQLite config, we should be careful.
+  const stmt = db.prepare('DELETE FROM users WHERE id = ?');
+  stmt.run(id);
+};
+
 module.exports = {
   findById,
   save,
   findBossByCode,
-  reset
+  findAllByCompanyCode,
+  reset,
+  delete: deleteUser // Export as delete
 };

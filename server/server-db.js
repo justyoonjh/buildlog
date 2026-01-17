@@ -8,6 +8,7 @@ module.exports = {
   findUserById: User.findById,
   saveUser: User.save,
   findBossByCode: User.findBossByCode,
+  findAllByCompanyCode: User.findAllByCompanyCode,
   resetUsers: User.reset,
   // Expose raw db if needed, or other models
   db

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAuthStore } from '@/features/auth/stores/useAuthStore';
 import { X, LogOut, User, Phone, Building } from 'lucide-react';
+import { ROLES } from '@/shared/constants/auth';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -38,7 +39,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
           </div>
           <h2 className="text-xl font-bold text-slate-900">{user.name}</h2>
           <span className="text-sm text-slate-500 font-medium mt-1">
-            {user.role === 'boss' ? '관리자' : '작업자'}
+            {user.role === ROLES.BOSS ? '관리자' : '작업자'}
           </span>
         </div>
 

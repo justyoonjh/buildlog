@@ -1,6 +1,6 @@
 import React, { Suspense, lazy } from 'react';
 import { createBrowserRouter, useParams, useNavigate } from 'react-router-dom';
-import { ProtectedRoute, PublicRoute } from '@/features/auth/components/RouteGuards';
+import { ProtectedRoute, PublicRoute, PendingRoute, RejectedRoute } from '@/features/auth/components/RouteGuards';
 import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
 import { Loading } from '@/shared/components/ui/Loading';
 import { AuthLayout } from '@/components/layout/AuthLayout';
@@ -15,6 +15,8 @@ const LoginView = lazy(() => import('@/features/auth/components/LoginView').then
 const SignupSelectionView = lazy(() => import('@/features/auth/components/SignupSelectionView').then(module => ({ default: module.SignupSelectionView })));
 const BossSignupForm = lazy(() => import('@/features/auth/components/BossSignupForm').then(module => ({ default: module.BossSignupForm })));
 const EmployeeSignupForm = lazy(() => import('@/features/auth/components/EmployeeSignupForm').then(module => ({ default: module.EmployeeSignupForm })));
+const PendingApprovalView = lazy(() => import('@/features/auth/components/PendingApprovalView').then(module => ({ default: module.PendingApprovalView })));
+const RejectedApprovalView = lazy(() => import('@/features/auth/components/RejectedApprovalView').then(module => ({ default: module.RejectedApprovalView })));
 
 // Loading Wrapper
 const SuspenseLayout = ({ children }: { children: React.ReactNode }) => (
@@ -54,6 +56,19 @@ const EmployeeSignupPage = () => (
   </PublicRoute>
 );
 
+// Wrappers for Approval Pages
+const PendingPage = () => (
+  <PendingRoute>
+    <SuspenseLayout><PendingApprovalView /></SuspenseLayout>
+  </PendingRoute>
+);
+
+const RejectedPage = () => (
+  <RejectedRoute>
+    <SuspenseLayout><RejectedApprovalView /></SuspenseLayout>
+  </RejectedRoute>
+);
+
 const LoginViewWrapper = () => {
   const navigate = useNavigate();
   const { handleLoginSubmit, isLoading, error } = useLogin();
@@ -79,6 +94,14 @@ export const router = createBrowserRouter([
         </ErrorBoundary>
       </ProtectedRoute>
     ),
+  },
+  {
+    path: '/approval/pending',
+    element: <PendingPage />,
+  },
+  {
+    path: '/approval/rejected',
+    element: <RejectedPage />,
   },
   {
     path: '/projects/:id',
