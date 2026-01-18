@@ -162,6 +162,42 @@ export const StepContract: React.FC<StepContractProps> = ({ data, onPaymentChang
           {contractContent}
         </div>
 
+
+        {/* Estimate Detail Table */}
+        <div className="mb-8">
+          <h3 className="font-bold text-base mb-2">[별첨] 공사 견적 상세 내역</h3>
+          <table className="w-full border-collapse border border-slate-400 text-xs">
+            <thead>
+              <tr className="bg-slate-100">
+                <th className="border border-slate-400 p-2 w-16">구분</th>
+                <th className="border border-slate-400 p-2">품명/내용</th>
+                <th className="border border-slate-400 p-2 w-24">규격/사양</th>
+                <th className="border border-slate-400 p-2 w-12">수량</th>
+                <th className="border border-slate-400 p-2 w-12">단위</th>
+                <th className="border border-slate-400 p-2 w-24 text-right">단가</th>
+                <th className="border border-slate-400 p-2 w-24 text-right">금액</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.items && data.items.map((item, idx) => (
+                <tr key={idx}>
+                  <td className="border border-slate-400 p-2 text-center">{item.category}</td>
+                  <td className="border border-slate-400 p-2">{item.description}</td>
+                  <td className="border border-slate-400 p-2 text-center text-slate-500">{item.spec}</td>
+                  <td className="border border-slate-400 p-2 text-center">{item.quantity}</td>
+                  <td className="border border-slate-400 p-2 text-center">{item.unit}</td>
+                  <td className="border border-slate-400 p-2 text-right">{formatNumber(item.unitPrice)}</td>
+                  <td className="border border-slate-400 p-2 text-right">{formatNumber(item.amount)}</td>
+                </tr>
+              ))}
+              <tr className="bg-slate-50 font-bold">
+                <td colSpan={6} className="border border-slate-400 p-2 text-center">합 계 (VAT {data.vatIncluded ? '포함' : '별도'})</td>
+                <td className="border border-slate-400 p-2 text-right text-blue-800">{formatNumber(data.totalAmount)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
         {/* Date & Sign */}
         <div className="mt-12 text-center font-bold">
           <div className="mb-8">{today}</div>
@@ -197,6 +233,6 @@ export const StepContract: React.FC<StepContractProps> = ({ data, onPaymentChang
           위 계약 내용을 모두 확인하였으며, 이에 동의합니다.
         </span>
       </div>
-    </div>
+    </div >
   );
 };

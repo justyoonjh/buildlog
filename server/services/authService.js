@@ -1,3 +1,4 @@
+const argon2 = require('argon2');
 const db = require('../server-db');
 const ApiError = require('../utils/ApiError');
 const { ROLES, STATUS } = require('../constants/auth');
@@ -60,7 +61,12 @@ class AuthService {
 
     console.log('DEBUG: Registering User:', newUser.id);
 
-    await db.saveUser(newUser);
+    try {
+      await db.saveUser(newUser);
+    } catch (dbError) {
+      console.error('DEBUG: DB Save Error:', dbError);
+      throw new ApiError(500, 'Database Save Failed: ' + dbError.message, 'DB_ERROR');
+    }
 
     const { passwordHash, ...safeUser } = newUser;
     return safeUser;
@@ -72,12 +78,19 @@ class AuthService {
   async login(id, password) {
     // 1. Database User Check
     const user = await this.findUserById(id);
+    console.log(`DEBUG: Login attempt for ${id}. Found: ${!!user}`);
+
     if (!user) {
+      console.log('DEBUG: User not found in DB');
       throw new ApiError(401, '아이디 또는 비밀번호가 올바르지 않습니다.', 'AUTH_FAILED');
     }
 
+    console.log('DEBUG: Verifying password...');
     const isValid = await this.verifyPassword(password, user.passwordHash);
+    console.log(`DEBUG: Password valid? ${isValid}`);
+
     if (!isValid) {
+      console.log('DEBUG: Password mismatch');
       throw new ApiError(401, '아이디 또는 비밀번호가 올바르지 않습니다.', 'AUTH_FAILED');
     }
 

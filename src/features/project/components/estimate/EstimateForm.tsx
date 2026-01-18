@@ -96,9 +96,10 @@ export const EstimateForm: React.FC<EstimateFormProps> = ({ onBack, onComplete, 
         alert('견적이 확정되었습니다. 계약 탭으로 이동합니다.');
         onComplete(savedEstimate);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Save failed:', error);
-      alert('저장에 실패했습니다.');
+      const msg = error.response?.data?.message || '저장에 실패했습니다.';
+      alert(`오류가 발생했습니다: ${msg}`);
     } finally {
       setIsLoading(false);
     }

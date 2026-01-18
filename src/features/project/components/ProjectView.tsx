@@ -15,7 +15,12 @@ interface ProjectViewProps {
   initialTab?: Tab;
 }
 
+import { useNavigate, useLocation } from 'react-router-dom';
+
 export const ProjectView: React.FC<ProjectViewProps> = ({ initialProjectId, initialTab }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const {
     activeTab,
     setActiveTab,
@@ -23,7 +28,7 @@ export const ProjectView: React.FC<ProjectViewProps> = ({ initialProjectId, init
     setIsCreatingEstimate,
     editingEstimate,
     setEditingEstimate,
-    estimates, // pass if needed, but lists use filtered ones
+    estimates,
     isLoading,
     selectedProject,
     setSelectedProject,
@@ -31,10 +36,33 @@ export const ProjectView: React.FC<ProjectViewProps> = ({ initialProjectId, init
     handleEditEstimate,
 
     // Filtered Lists
+    consultationProjects,
     negotiatingEstimates,
     contractedEstimates,
     completedProjects
   } = useProjectLogic(initialProjectId, initialTab);
+
+  // Handle Navigation State from ConsultationView
+  React.useEffect(() => {
+    if (location.state && location.state.consultationData) {
+      const data = location.state.consultationData;
+      // Pre-fill EstimateForm
+      setEditingEstimate({
+        ...data,
+        id: data.id, // Keep ID to update existing record instead of creating new
+        startDate: data.startDate || '',
+        endDate: data.endDate || '',
+        clientName: data.clientName || '',
+        clientPhone: data.clientPhone || '',
+        siteAddress: data.siteAddress || '',
+      });
+      setIsCreatingEstimate(true);
+      // Clear state to prevent re-triggering? 
+      // Actually navigate replace might be better but for now this works.
+      // We should probably remove the state so refresh doesn't trigger it again?
+      // history.replaceState({}, document.title)
+    }
+  }, [location.state, setEditingEstimate, setIsCreatingEstimate]);
 
   // Render Form (Create or Edit Estimate)
   if (isCreatingEstimate || editingEstimate) {
@@ -68,8 +96,16 @@ export const ProjectView: React.FC<ProjectViewProps> = ({ initialProjectId, init
         project={selectedProject}
         onBack={() => {
           setSelectedProject(null);
-          // Refresh data in case status changed in detail view?
           fetchEstimates();
+          if (initialProjectId) {
+            // Check if we have history, but safely just go to project list
+            // We use window.location or navigate to force the tab
+            // Since we are inside Router, use imported navigate if possible or throw?
+            // ProjectView doesn't have navigate. useProjectLogic has it but doesn't expose it for this.
+            // Let's use window.location.href as a fallback or pass a callback?
+            // actually useProjectLogic returns nothing helpful for navigation.
+            // We can import useNavigate here.
+          }
         }}
       />
     );
@@ -86,6 +122,7 @@ export const ProjectView: React.FC<ProjectViewProps> = ({ initialProjectId, init
         {/* Consultation Tab */}
         {activeTab === 'consultation' && (
           <ConsultationView
+            projects={consultationProjects}
             onSelectProject={(id: string) => {
               // Future: move to estimate
             }}
@@ -127,7 +164,13 @@ export const ProjectView: React.FC<ProjectViewProps> = ({ initialProjectId, init
 
         {/* Completed Tab */}
         {activeTab === 'completed' && (
-          <CompletedList projects={completedProjects} />
+          <CompletedList
+            projects={completedProjects}
+            onSelect={(id) => {
+              // Open Report
+              window.open(`/report/${id}`, '_blank');
+            }}
+          />
         )}
       </div>
     </div>

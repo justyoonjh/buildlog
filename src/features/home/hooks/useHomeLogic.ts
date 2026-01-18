@@ -4,11 +4,20 @@ import { useNavigate } from 'react-router-dom';
 import { Estimate, EstimatesResponse } from '@/types';
 import apiClient from '@/services/apiClient';
 
+import { useSearchParams } from 'react-router-dom';
+
 export const useHomeLogic = () => {
-  const [activeTab, setActiveTab] = useState('home');
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab') || 'home';
+  const initialProjectTab = searchParams.get('project_tab'); // 'consultation', 'estimate', etc.
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isSheetExpanded, setIsSheetExpanded] = useState(false);
   const [targetProjectId, setTargetProjectId] = useState<string | undefined>(undefined);
+
+  // Sync tab changes to URL (optional but good for history)
+  // modifying URL might be tricky if we want to avoid reload, but let's just read it for now.
+
 
   // Modal States
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -35,6 +44,7 @@ export const useHomeLogic = () => {
   return {
     activeTab,
     setActiveTab,
+    initialProjectTab,
     selectedDate,
     setSelectedDate,
     isSheetExpanded,

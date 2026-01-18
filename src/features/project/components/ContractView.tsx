@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { FileSignature } from 'lucide-react';
-import apiClient from '@/services/apiClient';
+import { useEstimatesQuery } from '@/features/project/hooks/useEstimatesQuery';
 import { ContractForm } from './ContractForm';
 
 interface ContractViewProps {
@@ -8,27 +8,10 @@ interface ContractViewProps {
 }
 
 export const ContractView: React.FC<ContractViewProps> = ({ onSelectProject }) => {
-  const [contracts, setContracts] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const { data, isLoading, refetch } = useEstimatesQuery({ status: 'contract_ready' });
   const [selectedProject, setSelectedProject] = useState<any | null>(null);
 
-  const fetchContracts = async () => {
-    setIsLoading(true);
-    try {
-      const res = await apiClient.get('/estimates');
-      if (res.data.success) {
-        setContracts(res.data.estimates.filter((e: any) => e.status === 'contract_ready'));
-      }
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchContracts();
-  }, []);
+  const contracts = data?.estimates || [];
 
   if (selectedProject) {
     return (
@@ -36,11 +19,11 @@ export const ContractView: React.FC<ContractViewProps> = ({ onSelectProject }) =
         project={selectedProject}
         onBack={() => {
           setSelectedProject(null);
-          fetchContracts();
+          refetch();
         }}
         onComplete={() => {
           setSelectedProject(null);
-          fetchContracts();
+          refetch();
           // Ideally refresh parent or move user to Construction tab. 
           // But for now staying here or relying on user to switch tab.
           // Or we can use onSelectProject callback if it was intended to switch tabs?

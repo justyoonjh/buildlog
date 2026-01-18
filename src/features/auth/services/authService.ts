@@ -49,6 +49,11 @@ export const authService = {
       }
       return { success: false, message: response.data.message };
     } catch (error: any) {
+      // Handle 409 gracefully
+      if (error.response?.status === 409) {
+        return { success: false, message: '이미 존재하는 아이디입니다.' };
+      }
+
       console.error('Register error:', error);
       const msg = error.response?.data?.message || '회원가입 중 오류가 발생했습니다.';
       return { success: false, message: msg };

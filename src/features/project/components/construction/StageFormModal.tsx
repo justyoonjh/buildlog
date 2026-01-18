@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { ConstructionStage } from '@/types';
+import { useCompanyMembers } from '@/features/company/hooks/useCompanyMembers';
 
 interface StageFormModalProps {
   isOpen: boolean;
@@ -11,6 +12,11 @@ interface StageFormModalProps {
 }
 
 export const StageFormModal: React.FC<StageFormModalProps> = ({ isOpen, onClose, initialData, onSave, title }) => {
+  const { approvedMembers, boss } = useCompanyMembers();
+
+  // Combine Boss + Approved Employees
+  const eligibleManagers = [boss, ...approvedMembers].filter(Boolean);
+
   const [formData, setFormData] = useState<Partial<ConstructionStage>>({
     name: '',
     manager: '',
@@ -58,13 +64,28 @@ export const StageFormModal: React.FC<StageFormModalProps> = ({ isOpen, onClose,
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">담당직원 <span className="text-red-500">*</span></label>
-            <input
-              type="text"
-              value={formData.manager || ''}
-              onChange={(e) => setFormData({ ...formData, manager: e.target.value })}
-              className="w-full p-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
-              placeholder="이름 입력"
-            />
+            {eligibleManagers.length > 0 ? (
+              <select
+                value={formData.manager || ''}
+                onChange={(e) => setFormData({ ...formData, manager: e.target.value })}
+                className="w-full p-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 bg-white"
+              >
+                <option value="">담당자 선택</option>
+                {eligibleManagers.map(member => (
+                  <option key={member?.id} value={member?.name}>
+                    {member?.name} {member?.position ? `(${member.position})` : ''}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={formData.manager || ''}
+                onChange={(e) => setFormData({ ...formData, manager: e.target.value })}
+                className="w-full p-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+                placeholder="이름 입력"
+              />
+            )}
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">소요기간</label>

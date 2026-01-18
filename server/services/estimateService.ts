@@ -1,9 +1,16 @@
-const { db } = require('../db-init');
-const { v4: uuidv4 } = require('uuid');
+import { db } from '../db-init.js'; // Assuming db-init is still js or we need to check imports
+import { v4 as uuidv4 } from 'uuid';
+import { Estimate } from '../../src/types'; // Import shared type
+
+interface EstimateFilters {
+  status?: string;
+  page?: number;
+  limit?: number;
+}
 
 const estimateService = {
   // Create new estimate (Draft)
-  createEstimate: async (data, userId) => {
+  createEstimate: async (data: any, userId: string) => {
     const {
       clientName, clientPhone, siteAddress,
       startDate, endDate, totalAmount, vatIncluded,
@@ -22,7 +29,7 @@ const estimateService = {
       ) VALUES (
         @id, @userId, @clientName, @clientPhone, @siteAddress, 
         @startDate, @endDate, @totalAmount, @vatIncluded, 
-        'negotiating', @memo, @modelImage, @generatedImage, @styleDescription, @createdAt
+        @status, @memo, @modelImage, @generatedImage, @styleDescription, @createdAt
       )
     `);
 
@@ -48,6 +55,7 @@ const estimateService = {
         endDate: endDate || null,
         totalAmount: totalAmount || 0,
         vatIncluded: vatIncluded ? 1 : 0,
+        status: data.status || 'negotiating',
         memo,
         modelImage: modelImage || null,
         generatedImage: generatedImage || null,
@@ -73,26 +81,49 @@ const estimateService = {
     return await estimateService.getEstimateById(estimateId);
   },
 
-  // Get all estimates for user
-  getEstimatesByUser: async (userId) => {
-    const stmt = db.prepare(`
-      SELECT * FROM estimates 
-      WHERE userId = ? 
-      ORDER BY createdAt DESC
-    `);
-    const estimates = stmt.all(userId);
-    return estimates.map(est => ({
-      ...est,
-      vatIncluded: !!est.vatIncluded
-    }));
+  // Get estimates for user with filtering and pagination
+  getEstimatesByUser: async (userId: string, filters: EstimateFilters = {}) => {
+    const { status, page = 1, limit = 20 } = filters;
+    const offset = (page - 1) * limit;
+
+    let query = `SELECT * FROM estimates WHERE userId = ?`;
+    const params: any[] = [userId];
+
+    if (status) {
+      query += ` AND status = ?`;
+      params.push(status);
+    }
+
+    // Count Total
+    const countStmt = db.prepare(query.replace('SELECT *', 'SELECT COUNT(*) as total'));
+    const totalResult = countStmt.get(...params) as { total: number };
+    const total = totalResult ? totalResult.total : 0;
+
+    // Fetch Data
+    query += ` ORDER BY createdAt DESC LIMIT ? OFFSET ?`;
+    params.push(limit, offset);
+
+    const stmt = db.prepare(query);
+    const estimates = stmt.all(...params) as any[]; // Type assertion for DB result
+
+    return {
+      estimates: estimates.map(est => ({
+        ...est,
+        vatIncluded: !!est.vatIncluded
+      })),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    };
   },
 
   // Get single estimate details
-  getEstimateById: async (id) => {
-    const estimate = db.prepare('SELECT * FROM estimates WHERE id = ?').get(id);
+  getEstimateById: async (id: string) => {
+    const estimate = db.prepare('SELECT * FROM estimates WHERE id = ?').get(id) as any;
     if (!estimate) return null;
 
-    const items = db.prepare('SELECT * FROM estimate_items WHERE estimateId = ?').all(id);
+    const items = db.prepare('SELECT * FROM estimate_items WHERE estimateId = ?').all(id) as any[];
 
     return {
       ...estimate,
@@ -102,9 +133,9 @@ const estimateService = {
   },
 
   // Update estimate
-  updateEstimate: async (id, data, userId) => {
+  updateEstimate: async (id: string, data: any, userId: string) => {
     // Check ownership
-    const existing = db.prepare('SELECT userId FROM estimates WHERE id = ?').get(id);
+    const existing = db.prepare('SELECT userId, status, modelImage, generatedImage, styleDescription FROM estimates WHERE id = ?').get(id) as any;
     if (!existing || existing.userId !== userId) {
       throw new Error('Unauthorized or Estimate not found');
     }
@@ -187,8 +218,8 @@ const estimateService = {
   },
 
   // Delete estimate
-  deleteEstimate: async (id, userId) => {
-    const existing = db.prepare('SELECT userId FROM estimates WHERE id = ?').get(id);
+  deleteEstimate: async (id: string, userId: string) => {
+    const existing = db.prepare('SELECT userId FROM estimates WHERE id = ?').get(id) as any;
     if (!existing || existing.userId !== userId) {
       throw new Error('Unauthorized or Estimate not found');
     }
@@ -200,4 +231,4 @@ const estimateService = {
   }
 };
 
-module.exports = estimateService;
+export default estimateService;

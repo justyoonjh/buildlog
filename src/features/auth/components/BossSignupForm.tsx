@@ -165,7 +165,7 @@ export const BossSignupForm: React.FC<BossSignupFormProps> = ({ onCancel, onComp
       // const { hash, salt } = await hashPassword(password); // Moved to server
       const newCompanyCode = generateCompanyCode();
 
-      const { success, companyCode } = await authService.register({
+      const result = await authService.register({
         id: email,
         password: password, // Send plain password to server
         name: ownerName,
@@ -188,11 +188,12 @@ export const BossSignupForm: React.FC<BossSignupFormProps> = ({ onCancel, onComp
         },
       });
 
-      if (success) {
+      if (result.success) {
+        setCreatedCompanyCode(result.companyCode || '');
         toast.success('회원가입이 완료되었습니다. 로그인해주세요.');
-        onComplete(); // Redirect to login immediately
+        onComplete();
       } else {
-        toast.error('이미 존재하는 아이디입니다.');
+        toast.error(result.message || '회원가입에 실패했습니다.');
       }
     } catch (err: any) {
       logSystemError('Error C', `Final Submit Failed: ${err.message} `);

@@ -60,8 +60,9 @@ exports.register = catchAsync(async (req, res, next) => {
       });
     });
   } catch (error) {
-    if (error.message === 'User already exists') {
-      return next(new AppError('User already exists', 409));
+    console.error('DEBUG: Register Controller Error:', error);
+    if (error.code === 'USER_EXISTS' || error.message === 'User already exists' || error.message === '이미 존재하는 아이디입니다.') {
+      return next(new AppError('이미 존재하는 아이디입니다.', 409));
     }
     throw error;
   }

@@ -15,7 +15,8 @@ export const ConstructionStageChart: React.FC<ConstructionStageChartProps> = ({
   onGenerateAiSchedule,
   isGenerating
 }) => {
-  const displayStages = aiSchedule.length > 0 ? aiSchedule : stages;
+  const safeStages = stages || [];
+  const displayStages = aiSchedule.length > 0 ? aiSchedule : safeStages;
 
   return (
     <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm min-h-[300px]">
@@ -23,7 +24,7 @@ export const ConstructionStageChart: React.FC<ConstructionStageChartProps> = ({
         <h3 className="font-bold text-slate-800">전체 공정 시각화</h3>
         <button
           onClick={onGenerateAiSchedule}
-          disabled={isGenerating || stages.length === 0}
+          disabled={isGenerating || safeStages.length === 0}
           className="flex items-center gap-1.5 text-xs bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg font-bold hover:bg-indigo-100 transition-colors disabled:opacity-50"
         >
           {isGenerating ? (
@@ -40,7 +41,7 @@ export const ConstructionStageChart: React.FC<ConstructionStageChartProps> = ({
         </button>
       </div>
 
-      {stages.length === 0 ? (
+      {safeStages.length === 0 ? (
         <div className="text-center py-10 text-slate-400 text-sm">
           시각화할 데이터가 없습니다. 단계를 먼저 추가해주세요.
         </div>

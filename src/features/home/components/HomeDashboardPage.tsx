@@ -1,25 +1,19 @@
 import React, { useState } from 'react';
 import { HomeHeader } from './HomeHeader';
-import { BottomNavigation } from './BottomNavigation';
 import { UserProfileModal } from './UserProfileModal';
 import { BusinessInfoModal } from './BusinessInfoModal';
-import { ProjectView } from '@/features/project/components/ProjectView';
-import { PortfolioView } from '@/features/portfolio/components/PortfolioView';
 import { ConsultationModal } from './ConsultationModal';
 import { CompanyInfoModal } from '@/features/company/components/CompanyInfoModal';
 import { useHomeLogic } from '@/features/home/hooks/useHomeLogic';
 import { HomeDashboard } from './HomeDashboard';
 
-export const HomeView: React.FC = () => {
+export const HomeDashboardPage: React.FC = () => {
   const {
-    activeTab,
-    setActiveTab,
     selectedDate,
     setSelectedDate,
     isSheetExpanded,
     setIsSheetExpanded,
     estimates,
-    targetProjectId,
     handleProjectClick,
     isProfileOpen,
     setIsProfileOpen,
@@ -27,13 +21,12 @@ export const HomeView: React.FC = () => {
     setIsBusinessInfoOpen,
     isConsultationModalOpen,
     setIsConsultationModalOpen,
-    initialProjectTab
   } = useHomeLogic();
 
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col relative overflow-hidden">
+    <div className="flex-1 flex flex-col h-full bg-slate-50">
       {/* Header */}
       <HomeHeader
         onTodayClick={() => setSelectedDate(new Date())}
@@ -57,40 +50,21 @@ export const HomeView: React.FC = () => {
         onClose={() => setIsConsultationModalOpen(false)}
       />
 
-      {/* Added CompanyInfoModal */}
       <CompanyInfoModal
         isOpen={isCompanyModalOpen}
         onClose={() => setIsCompanyModalOpen(false)}
       />
 
-      {/* Main Content Area */}
-      <main className="flex-1 flex flex-col relative pb-[60px]">
-        {activeTab === 'home' && (
-          <HomeDashboard
-            selectedDate={selectedDate}
-            onDateSelect={setSelectedDate}
-            isSheetExpanded={isSheetExpanded}
-            onToggleSheet={() => setIsSheetExpanded(prev => !prev)}
-            projects={estimates}
-            onProjectClick={handleProjectClick}
-            onFabClick={() => setIsConsultationModalOpen(true)}
-          />
-        )}
-
-        {activeTab === 'project' && (
-          <ProjectView
-            initialProjectId={targetProjectId}
-            initialTab={initialProjectTab as any}
-          />
-        )}
-
-        {activeTab === 'portfolio' && (
-          <PortfolioView />
-        )}
-      </main>
-
-      {/* Bottom Navigation */}
-      <BottomNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+      {/* Dashboard Content */}
+      <HomeDashboard
+        selectedDate={selectedDate}
+        onDateSelect={setSelectedDate}
+        isSheetExpanded={isSheetExpanded}
+        onToggleSheet={() => setIsSheetExpanded(prev => !prev)}
+        projects={estimates}
+        onProjectClick={handleProjectClick}
+        onFabClick={() => setIsConsultationModalOpen(true)}
+      />
     </div>
   );
 };

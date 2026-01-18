@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { createBrowserRouter, useParams, useNavigate } from 'react-router-dom';
+import { createBrowserRouter, useParams, useNavigate, Navigate } from 'react-router-dom';
 import { ProtectedRoute, PublicRoute, PendingRoute, RejectedRoute } from '@/features/auth/components/RouteGuards';
 import { ErrorBoundary } from '@/shared/components/ui/ErrorBoundary';
 import { Loading } from '@/shared/components/ui/Loading';
@@ -7,8 +7,18 @@ import { AuthLayout } from '@/components/layout/AuthLayout';
 import { useLogin } from '@/features/auth/hooks/useLogin';
 
 // Lazy Load Components
-const HomeView = lazy(() => import('@/features/home/components/HomeView').then(module => ({ default: module.HomeView })));
-const ProjectView = lazy(() => import('@/features/project/components/ProjectView').then(module => ({ default: module.ProjectView })));
+const MainLayout = lazy(() => import('@/components/layout/MainLayout').then(module => ({ default: module.MainLayout })));
+const HomeDashboardPage = lazy(() => import('@/features/home/components/HomeDashboardPage').then(module => ({ default: module.HomeDashboardPage })));
+// Project Pages
+const ProjectLayout = lazy(() => import('@/features/project/components/ProjectLayout').then(module => ({ default: module.ProjectLayout })));
+const ConsultationPage = lazy(() => import('@/features/project/components/pages/ConsultationPage').then(module => ({ default: module.ConsultationPage })));
+const EstimateListPage = lazy(() => import('@/features/project/components/pages/EstimateListPage').then(module => ({ default: module.EstimateListPage })));
+const EstimateFormPage = lazy(() => import('@/features/project/components/pages/EstimateFormPage').then(module => ({ default: module.EstimateFormPage })));
+const ContractPage = lazy(() => import('@/features/project/components/pages/ContractPage').then(module => ({ default: module.ContractPage })));
+const ConstructionListPage = lazy(() => import('@/features/project/components/pages/ConstructionListPage').then(module => ({ default: module.ConstructionListPage })));
+const ConstructionDetailPage = lazy(() => import('@/features/project/components/pages/ConstructionDetailPage').then(module => ({ default: module.ConstructionDetailPage })));
+const CompletedListPage = lazy(() => import('@/features/project/components/pages/CompletedListPage').then(module => ({ default: module.CompletedListPage })));
+
 const ProjectReportView = lazy(() => import('@/features/project/components/ProjectReportView').then(module => ({ default: module.ProjectReportView })));
 
 const LoginView = lazy(() => import('@/features/auth/components/LoginView').then(module => ({ default: module.LoginView })));
@@ -89,11 +99,36 @@ export const router = createBrowserRouter([
       <ProtectedRoute>
         <ErrorBoundary>
           <SuspenseLayout>
-            <HomeView />
+            <MainLayoutWrapper />
           </SuspenseLayout>
         </ErrorBoundary>
       </ProtectedRoute>
     ),
+    children: [
+      {
+        index: true,
+        element: <HomeDashboardPageWrapper />
+      },
+      {
+        path: 'project',
+        element: <ProjectLayoutWrapper />,
+        children: [
+          { index: true, element: <Navigate to="consultation" replace /> },
+          { path: 'consultation', element: <ConsultationPageWrapper /> },
+          { path: 'estimate', element: <EstimateListPageWrapper /> },
+          { path: 'estimate/new', element: <EstimateFormPageWrapper /> },
+          { path: 'estimate/:id', element: <EstimateFormPageWrapper /> },
+          { path: 'contract', element: <ContractPageWrapper /> },
+          { path: 'construction', element: <ConstructionListPageWrapper /> },
+          { path: 'construction/:id', element: <ConstructionDetailPageWrapper /> },
+          { path: 'completed', element: <CompletedListPageWrapper /> },
+        ]
+      },
+      {
+        path: 'portfolio',
+        element: <div className="p-4">Portfolio (Coming Soon)</div> // Placeholder or separate view
+      }
+    ]
   },
   {
     path: '/approval/pending',
@@ -102,18 +137,6 @@ export const router = createBrowserRouter([
   {
     path: '/approval/rejected',
     element: <RejectedPage />,
-  },
-  {
-    path: '/projects/:id',
-    element: (
-      <ProtectedRoute>
-        <ErrorBoundary>
-          <SuspenseLayout>
-            <ProjectViewWrapper />
-          </SuspenseLayout>
-        </ErrorBoundary>
-      </ProtectedRoute>
-    ),
   },
   {
     path: '/report/:id',
@@ -145,9 +168,35 @@ export const router = createBrowserRouter([
   },
 ]);
 
-function ProjectViewWrapper() {
-  const { id } = useParams();
-  return <ProjectView initialProjectId={id} />;
+function MainLayoutWrapper() {
+  return <MainLayout />;
+}
+function HomeDashboardPageWrapper() {
+  return <HomeDashboardPage />;
+}
+function ProjectLayoutWrapper() {
+  return <ProjectLayout />;
+}
+function ConsultationPageWrapper() {
+  return <ConsultationPage />;
+}
+function EstimateListPageWrapper() {
+  return <EstimateListPage />;
+}
+function EstimateFormPageWrapper() {
+  return <EstimateFormPage />;
+}
+function ContractPageWrapper() {
+  return <ContractPage />;
+}
+function ConstructionListPageWrapper() {
+  return <ConstructionListPage />;
+}
+function ConstructionDetailPageWrapper() {
+  return <ConstructionDetailPage />;
+}
+function CompletedListPageWrapper() {
+  return <CompletedListPage />;
 }
 function ProjectReportViewWrapper() {
   const { id } = useParams();

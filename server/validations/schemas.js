@@ -67,7 +67,7 @@ const createEstimateSchema = z.object({
 
 const updateEstimateSchema = createEstimateSchema.partial().extend({
   // Add status if updated via PUT /:id
-  status: z.enum(['draft', 'negotiating', 'contracted', 'construction', 'completed', 'canceled']).optional(),
+  status: z.enum(['draft', 'negotiating', 'contract_ready', 'contracted', 'construction', 'completed', 'canceled']).optional(),
 
   // Payment terms
   downPayment: z.number().nonnegative().optional(),

@@ -20,7 +20,15 @@ export const ReportOverview: React.FC<ReportOverviewProps> = ({ project, stages,
             <span className="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded mb-2">
               PROJECT REPORT
             </span>
-            <h2 className="text-2xl font-bold text-slate-900 mb-1">{project.siteAddress} 프로젝트</h2>
+            <h2 className="text-2xl font-bold text-slate-900 mb-1">
+              {(() => {
+                if (!project.siteAddress) return '새 프로젝트';
+                const parts = project.siteAddress.split(' ');
+                // Use first 3 words for title
+                const shortAddr = parts.length > 3 ? parts.slice(0, 3).join(' ') : project.siteAddress;
+                return `${shortAddr} 프로젝트`;
+              })()}
+            </h2>
             <p className="text-slate-500 text-sm">작성일: {new Date().toLocaleDateString()}</p>
           </div>
           <div className="text-right">

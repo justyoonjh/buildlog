@@ -6,15 +6,19 @@ import { ReportHeader } from './report/ReportHeader';
 import { ReportOverview } from './report/ReportOverview';
 import { ConstructionStageList } from './report/ConstructionStageList';
 import { EstimateItemTable } from './report/EstimateItemTable';
+import { ReportContractSection } from './report/ReportContractSection';
 
 interface ProjectReportViewProps {
   projectId: string;
 }
 
+import { authService } from '@/features/auth/services/authService';
+
 export const ProjectReportView: React.FC<ProjectReportViewProps> = ({ projectId }) => {
   const navigate = useNavigate();
   const [project, setProject] = useState<any | null>(null);
   const [stages, setStages] = useState<ConstructionStage[]>([]);
+  const [user, setUser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,6 +26,14 @@ export const ProjectReportView: React.FC<ProjectReportViewProps> = ({ projectId 
     const fetchData = async () => {
       try {
         setLoading(true);
+        // Fetch User Info
+        try {
+          const storedUser = await authService.checkSession();
+          setUser(storedUser);
+        } catch (e) {
+          console.warn('Failed to fetch user info for report:', e);
+        }
+
         // Fetch Project (Estimate)
         const projectRes = await apiClient.get(`/estimates/${projectId}`);
         if (!projectRes.data.success) throw new Error('프로젝트 정보를 찾을 수 없습니다.');
@@ -98,6 +110,10 @@ export const ProjectReportView: React.FC<ProjectReportViewProps> = ({ projectId 
           stages={stages}
           progress={progress}
         />
+
+        <div className="break-inside-avoid">
+          <ReportContractSection project={project} user={user} />
+        </div>
 
         <ConstructionStageList stages={stages} />
 

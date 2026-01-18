@@ -10,19 +10,21 @@ interface ConstructionOverviewProps {
   aiSchedule: any[];
   isGenerating: boolean;
   onAiAnalysis: () => void;
-  onSaveStage: (data: Partial<ConstructionStage>) => Promise<void>;
+  onSaveStage: (data: Partial<ConstructionStage>, id?: string) => Promise<void>;
   onStatusToggle: (stage: ConstructionStage) => Promise<void>;
   onDeleteStage: (id: string) => Promise<void>;
+  onCompleteConstruction: () => Promise<void>;
 }
 
 export const ConstructionOverview: React.FC<ConstructionOverviewProps> = ({
-  stages,
+  stages = [],
   aiSchedule,
   isGenerating,
   onAiAnalysis,
   onSaveStage,
   onStatusToggle,
-  onDeleteStage
+  onDeleteStage,
+  onCompleteConstruction
 }) => {
   const [overviewTab, setOverviewTab] = useState<'list' | 'chart'>('list');
   const [isAddingStage, setIsAddingStage] = useState(false);
@@ -127,6 +129,18 @@ export const ConstructionOverview: React.FC<ConstructionOverviewProps> = ({
         onSave={handleSaveWrapper}
         title={editingId ? '단계 수정' : '새 단계 추가'}
       />
+
+      {/* Construction Complete Button */}
+      {stages && stages.length > 0 && stages.every(s => s.status === 'completed') && (
+        <div className="sticky bottom-4 z-40 animate-in slide-in-from-bottom-4 fade-in duration-500">
+          <button
+            onClick={onCompleteConstruction}
+            className="w-full h-14 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-lg rounded-xl shadow-lg hover:shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+          >
+            <span>🎉 시공 완료 처리</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 };

@@ -5,21 +5,30 @@
  * Explicitly reflects the Origin header to Allow-Origin.
  */
 
-const express = require('express');
-// const cors = require('cors'); // REMOVED: We do it manually
-const session = require('express-session');
-const path = require('path');
-const fs = require('fs');
+import express, { Request, Response, NextFunction } from 'express';
+import session from 'express-session';
+import path from 'path';
+import fs from 'fs';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
 
 // Load Config
-require('dotenv').config();
-const config = require('./server-config');
+dotenv.config();
+
+// ESM __dirname fix
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Import Local Files
+// Using default import for CommonJS interoperability (handled by tsx/esModuleInterop)
+import config from './server-config.js';
+// Note: verify if we need detailed types for config, currently 'any' via JS
 
 const app = express();
 const PORT = config.PORT || 3001;
 
 // --- 1. Manual CORS Middleware (The "Hammer") ---
-app.use((req, res, next) => {
+app.use((req: Request, res: Response, next: NextFunction) => {
   const origin = req.headers.origin;
 
   // Allow any origin that is defined (browser) or allow * if undefined (tools)
@@ -41,7 +50,8 @@ app.use((req, res, next) => {
 
   // Handle Preflight directly and immediately
   if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+    res.status(200).end();
+    return; // explicit return for TS
   }
 
   console.log(`[API] ${req.method} ${req.url} | Origin: ${origin || 'Direct'}`);
@@ -60,7 +70,10 @@ if (!fs.existsSync(dataDir)) {
 }
 
 // Import Session Store Wrapper
-const BetterSqliteStore = require('./session-store')(session);
+// We use require here because it's a specific local module factory pattern
+// and converting it to import might require refactoring session-store.js too.
+import createSessionStore from './session-store.js';
+const BetterSqliteStore = createSessionStore(session);
 
 app.use(session({
   store: new BetterSqliteStore({
@@ -78,24 +91,34 @@ app.use(session({
 }));
 
 // --- 4. Routes ---
+// Dynamic imports or require for routes. 
+// Ideally these should also be converted to TS, but for now we require them.
+// tsx allows require.
+import authRoutes from './routes/auth.js';
+import estimateRoutes from './routes/estimates.js';
+import stageRoutes from './routes/stages.js';
+import aiRoutes from './routes/ai.js';
+import externalRoutes from './routes/external.js';
+
 try {
-  app.use('/api/auth', require('./routes/auth'));
-  app.use('/api/estimates', require('./routes/estimates'));
-  app.use('/api/stages', require('./routes/stages'));
-  app.use('/api/ai', require('./routes/ai'));
-  app.use('/api', require('./routes/external'));
+  app.use('/api/auth', authRoutes);
+  app.use('/api/estimates', estimateRoutes);
+  app.use('/api/stages', stageRoutes);
+  app.use('/api/ai', aiRoutes);
+  app.use('/api', externalRoutes);
 } catch (error) {
   console.error('❌ Failed to load routes:', error);
 }
 
 // --- 5. Error Handling ---
-app.use((err, req, res, next) => {
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   console.error('SERVER ERROR:', err);
   if (res.headersSent) {
     return next(err);
   }
 
-  res.status(err.status || 500).json({
+  const statusCode = err.statusCode || err.status || 500;
+  res.status(statusCode).json({
     success: false,
     message: err.message || 'Internal Server Error',
     code: err.code
@@ -103,9 +126,9 @@ app.use((err, req, res, next) => {
 });
 
 // --- 6. Start Server ---
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, () => {
   console.log(`\n✅ MANUAL SERVER running on port ${PORT}`);
   console.log(`   Local:   http://localhost:${PORT}`);
-  console.log(`   Network: http://0.0.0.0:${PORT}`);
+  // console.log(`   Network: http://0.0.0.0:${PORT}`);
   console.log(`   CORS:    Manual Reflection Mode (Allows All)`);
 });

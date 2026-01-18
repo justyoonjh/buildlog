@@ -16,6 +16,15 @@ interface ConstructionDetailProps {
 }
 
 const ConstructionDetail: React.FC<ConstructionDetailProps> = ({ project, onBack }) => {
+  // Debug Logging
+  React.useEffect(() => {
+    console.log('ConstructionDetail Mounted. Project:', project);
+  }, [project]);
+
+  if (!project) {
+    return <div className="p-10 text-center text-red-500">프로젝트 데이터가 없습니다.</div>;
+  }
+
   // React Query Hook
   const { stages, createStage, updateStage, deleteStage } = useConstructionStages(project.id);
 
@@ -77,6 +86,15 @@ const ConstructionDetail: React.FC<ConstructionDetailProps> = ({ project, onBack
   };
 
 
+  const handleDeleteStage = async (id: string) => {
+    if (!window.confirm('이 단계를 삭제하시겠습니까?')) return;
+    try {
+      await deleteStage(id);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   const handleDelete = async () => {
     if (window.confirm('정말로 이 프로젝트를 삭제하시겠습니까?\n삭제된 데이터는 복구할 수 없습니다.')) {
       try {
@@ -94,18 +112,47 @@ const ConstructionDetail: React.FC<ConstructionDetailProps> = ({ project, onBack
     }
   };
 
+  const handleCompleteConstruction = async () => {
+    if (!window.confirm('모든 공사가 완료되었습니까? 프로젝트를 완료 상태로 변경합니다.')) return;
+    try {
+      const res = await apiClient.put(`/estimates/${project.id}`, { status: 'completed' });
+      if (res.data.success) {
+        alert('프로젝트가 완료되었습니다! 완료 탭으로 이동합니다.');
+        onBack(); // This will trigger re-fetch in parent or we should rely on query invalidation
+      }
+    } catch (error) {
+      console.error('Failed to complete project:', error);
+      alert('완료 처리에 실패했습니다.');
+    }
+  };
+
   if (showPreview) {
     return <EstimatePreview project={project} onBack={() => setShowPreview(false)} />;
   }
 
   const getProjectTitle = (address: string) => {
     if (!address) return '새 프로젝트';
-    const parts = address.split(' ');
-    if (parts.length > 3) {
-      return parts.slice(0, 3).join(' ') + ' 프로젝트';
+    try {
+      const parts = address.split(' ');
+      if (parts.length > 3) {
+        return parts.slice(0, 3).join(' ') + ' 프로젝트';
+      }
+      return address + ' 프로젝트';
+    } catch (e) {
+      return '프로젝트';
     }
-    return address + ' 프로젝트';
   };
+
+  if (!project.id) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full bg-slate-50 gap-4">
+        <div className="text-red-500 font-bold">오류: 프로젝트 ID가 유효하지 않습니다.</div>
+        <button onClick={onBack} className="bg-slate-200 px-4 py-2 rounded text-slate-700 hover:bg-slate-300">
+          뒤로 가기
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full bg-slate-50 relative">
@@ -117,7 +164,7 @@ const ConstructionDetail: React.FC<ConstructionDetailProps> = ({ project, onBack
           </button>
           <div className="flex flex-col">
             <span className="text-lg font-bold text-slate-800">
-              {getProjectTitle(project.siteAddress)}
+              {getProjectTitle(project.siteAddress || '')}
             </span>
             <span className="text-xs text-slate-500">시공 현황</span>
           </div>
@@ -160,6 +207,7 @@ const ConstructionDetail: React.FC<ConstructionDetailProps> = ({ project, onBack
             onSaveStage={handleSaveStage}
             onStatusToggle={handleStatusToggle}
             onDeleteStage={handleDeleteStage}
+            onCompleteConstruction={handleCompleteConstruction}
           />
         )}
 

@@ -52,13 +52,17 @@ export const useProjectLogic = (initialProjectId?: string, initialTab?: Tab) => 
               setEditingEstimate(project);
             }
           }
-        } catch (error) {
-          console.error('Failed to load initial project:', error);
+        } catch (error: any) {
+          console.warn('Failed to load initial project:', error);
+          // If 404, likely ID mismatch due to DB wipe. Clear URL.
+          if (error.response && error.response.status === 404) {
+            navigate('/?tab=project', { replace: true });
+          }
         }
       };
       loadInitialProject();
     }
-  }, [initialProjectId, initialTab]);
+  }, [initialProjectId, initialTab, navigate]);
 
 
   // Handle edit click - navigate to detail view

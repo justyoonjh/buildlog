@@ -15,7 +15,9 @@ export const ConstructionStageList: React.FC<ConstructionStageListProps> = ({
   onDelete,
   onStatusToggle
 }) => {
-  if (stages.length === 0) {
+  const safeStages = stages || [];
+
+  if (safeStages.length === 0) {
     return (
       <div className="text-center py-10 bg-slate-50 rounded-xl border border-dashed border-slate-200">
         <Briefcase className="mx-auto text-slate-300 mb-2" size={32} />
@@ -26,7 +28,7 @@ export const ConstructionStageList: React.FC<ConstructionStageListProps> = ({
 
   return (
     <div className="space-y-3">
-      {stages.map((stage, index) => (
+      {safeStages.map((stage, index) => (
         <div key={stage.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm relative group">
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-2">
@@ -36,15 +38,39 @@ export const ConstructionStageList: React.FC<ConstructionStageListProps> = ({
               <h4 className="font-bold text-slate-800">{stage.name}</h4>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onStatusToggle(stage);
-                }}
-                className={`text-xs px-2 py-1 rounded-full transition-colors hover:opacity-80 ${stage.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}
-              >
-                {stage.status === 'pending' ? '대기중' : stage.status === 'in_progress' ? '진행중' : '완료'}
-              </button>
+              {stage.status === 'pending' && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onStatusToggle(stage);
+                  }}
+                  className="text-xs px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 font-bold hover:bg-blue-100 transition-colors"
+                >
+                  시작하기
+                </button>
+              )}
+              {stage.status === 'in_progress' && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onStatusToggle(stage);
+                  }}
+                  className="text-xs px-3 py-1.5 rounded-lg bg-green-50 text-green-600 font-bold hover:bg-green-100 transition-colors border border-green-200"
+                >
+                  단계 완료
+                </button>
+              )}
+              {stage.status === 'completed' && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onStatusToggle(stage);
+                  }}
+                  className="text-xs px-3 py-1.5 rounded-lg bg-slate-100 text-slate-500 font-bold hover:bg-slate-200 transition-colors"
+                >
+                  완료됨 (취소)
+                </button>
+              )}
 
               <div className="flex items-center gap-1 ml-1">
                 <button

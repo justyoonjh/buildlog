@@ -12,7 +12,7 @@ export const ConstructionContractView: React.FC<ConstructionContractViewProps> =
         <CheckCircle className="mx-auto text-green-500 mb-3" size={48} />
         <h2 className="text-xl font-bold text-slate-800 mb-2">계약이 완료된 프로젝트입니다</h2>
         <p className="text-slate-500 text-sm mb-6">
-          계약 일자: {new Date(project.createdAt).toLocaleDateString()}
+          계약 일자: {project.createdAt ? new Date(project.createdAt).toLocaleDateString() : '-'}
         </p>
         <div className="bg-slate-50 p-4 rounded-lg text-left text-sm space-y-2">
           <div className="flex justified-between">
@@ -22,7 +22,7 @@ export const ConstructionContractView: React.FC<ConstructionContractViewProps> =
           <div className="flex justified-between">
             <span className="text-slate-500">총 공사금액</span>
             <span className="font-bold text-blue-600 ml-auto flex-1 text-right">
-              {project.totalAmount?.toLocaleString()} 원
+              {project.totalAmount ? project.totalAmount.toLocaleString() : '0'} 원
             </span>
           </div>
         </div>

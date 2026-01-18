@@ -128,7 +128,6 @@ const initDatabase = () => {
     if (!userColumns.includes('status')) {
       console.log('Migrating: Adding status to users table...');
       db.exec("ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'approved'");
-      // Existing users are approved by default
     }
     if (!userColumns.includes('department')) {
       console.log('Migrating: Adding department to users table...');
@@ -137,6 +136,26 @@ const initDatabase = () => {
     if (!userColumns.includes('position')) {
       console.log('Migrating: Adding position to users table...');
       db.exec('ALTER TABLE users ADD COLUMN position TEXT');
+    }
+    if (!userColumns.includes('phone')) {
+      console.log('Migrating: Adding phone to users table...');
+      db.exec('ALTER TABLE users ADD COLUMN phone TEXT');
+    }
+    if (!userColumns.includes('companyName')) {
+      console.log('Migrating: Adding companyName to users table...');
+      db.exec('ALTER TABLE users ADD COLUMN companyName TEXT');
+    }
+    if (!userColumns.includes('businessNumber')) {
+      console.log('Migrating: Adding businessNumber to users table...');
+      db.exec('ALTER TABLE users ADD COLUMN businessNumber TEXT');
+    }
+    if (!userColumns.includes('businessInfo')) {
+      console.log('Migrating: Adding businessInfo to users table...');
+      db.exec('ALTER TABLE users ADD COLUMN businessInfo TEXT');
+    }
+    if (!userColumns.includes('address')) {
+      console.log('Migrating: Adding address to users table...');
+      db.exec('ALTER TABLE users ADD COLUMN address TEXT');
     }
 
   } catch (err) {
@@ -183,8 +202,8 @@ const initDatabase = () => {
       insertMany(users);
       console.log(`Successfully migrated ${users.length} users.`);
 
-      // Optional: Rename users.json to users.json.bak after successful migration
-      // fs.renameSync(jsonPath, jsonPath + '.bak');
+      // Rename users.json to users.json.bak after successful migration to prevent repeated seeding
+      fs.renameSync(jsonPath, jsonPath + '.bak');
 
     } catch (error) {
       console.error('Migration failed:', error);
