@@ -1,10 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Check, AlertCircle, ShieldCheck, ShieldAlert, Upload, Camera, FileText, Loader2, MapPin, Search, X, CheckCircle2, Copy, AlertTriangle, XCircle, User, Lock, Phone, Building2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, Check, ShieldCheck, ShieldAlert, FileText, Loader2, MapPin, Search, CheckCircle2, Copy, User, Lock, Phone, Building2 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/Button';
 import { Input } from '@/shared/components/ui/Input';
 import { analyzePassword, PasswordStrength, logSystemError, generateCompanyCode } from '@/shared/utils/security';
-import { extractBusinessInfo, validateBusinessWithNTS } from '@/features/auth/utils/businessCert';
-import { validateImageMiddleware } from '@/shared/utils/imageSecurity';
+import { validateBusinessWithNTS } from '@/features/auth/utils/businessCert';
 import { searchAddress, Juso } from '@/shared/services/addressApi';
 import { authService } from '@/features/auth/services/authService';
 
@@ -29,14 +28,11 @@ export const BossSignupForm: React.FC<BossSignupFormProps> = ({ onCancel, onComp
   const [phone, setPhone] = useState('');
   const [isPwTouched, setIsPwTouched] = useState(false);
 
-  // --- Step 2: Business Cert (OCR) ---
+  // --- Step 2: Business Info (Manual Input) ---
   const [businessNumber, setBusinessNumber] = useState('');
   const [ownerName, setOwnerName] = useState('');
   const [openDate, setOpenDate] = useState('');
   const [companyName, setCompanyName] = useState('');
-  const [isOcrProcessing, setIsOcrProcessing] = useState(false);
-  const [ocrImage, setOcrImage] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // --- Step 3: Address ---
   const [zipCode, setZipCode] = useState('');
@@ -72,45 +68,7 @@ export const BossSignupForm: React.FC<BossSignupFormProps> = ({ onCancel, onComp
     setStep(2);
   };
 
-  // --- Handlers: Step 2 (OCR & Business) ---
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // 1. Image Security Check
-    const securityCheck = await validateImageMiddleware(file);
-    if (!securityCheck.valid) {
-      toast.error(securityCheck.error || '이미지 보안 검사에 실패했습니다.');
-      return;
-    }
-    if (securityCheck.warning) {
-      toast.error(securityCheck.warning);
-    }
-
-    // 2. OCR Process
-    setIsOcrProcessing(true);
-    setOcrImage(URL.createObjectURL(file));
-
-    try {
-      const info = await extractBusinessInfo(file);
-      if (info) {
-        setBusinessNumber(info.b_no || '');
-        setOwnerName(info.c_nm || '');
-        setOpenDate(info.start_dt || '');
-        setCompanyName(info.s_nm || '');
-        toast.success('사업자 정보가 인식되었습니다. 내용을 확인해주세요.');
-      } else {
-        toast.error('정보를 인식하지 못했습니다. 직접 입력해주세요.');
-      }
-    } catch (err: any) {
-      console.error(err);
-
-      toast.error('OCR 분석 중 오류가 발생했습니다.');
-    } finally {
-      setIsOcrProcessing(false);
-    }
-  };
-
+  // --- Handlers: Step 2 (Business Info) ---
   const handleStep2Submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!businessNumber || !ownerName || !openDate) {
@@ -249,42 +207,28 @@ export const BossSignupForm: React.FC<BossSignupFormProps> = ({ onCancel, onComp
         </form>
       )}
 
-      {/* STEP 2: Business Certification */}
+      {/* STEP 2: Business Info */}
       {step === 2 && (
         <div className="space-y-6">
-          <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+          <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 mb-4">
             <h4 className="font-bold text-blue-900 mb-2 flex items-center gap-2">
-              <Camera className="h-5 w-5" />
-              사업자등록증 촬영/업로드
+              <FileText className="h-5 w-5" />
+              사업자 정보 입력
             </h4>
-            <p className="text-xs text-blue-700 mb-4">
-              사업자등록증을 업로드하면 정보를 자동으로 입력해드립니다.
+            <p className="text-xs text-blue-700">
+              사업자등록증에 기재된 정보를 정확하게 입력해주세요.<br />
+              국세청 인증을 통해 유효성을 확인합니다.
             </p>
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-            />
-            <Button
-              variant="secondary"
-              fullWidth
-              onClick={() => fileInputRef.current?.click()}
-              isLoading={isOcrProcessing}
-            >
-              {isOcrProcessing ? '분석 중...' : '이미지 업로드'}
-            </Button>
           </div>
 
           <form onSubmit={handleStep2Submit} className="space-y-4">
             <Input
               id="b_no"
               label="사업자등록번호"
-              placeholder="000-00-00000"
+              placeholder="000-00-00000 (하이픈 제외 가능)"
               value={businessNumber}
-              readOnly
-              className="bg-slate-100 text-slate-600 cursor-not-allowed"
+              onChange={(e) => setBusinessNumber(e.target.value)}
+              required
               icon={<FileText size={18} />}
             />
             <Input
@@ -292,17 +236,18 @@ export const BossSignupForm: React.FC<BossSignupFormProps> = ({ onCancel, onComp
               label="대표자 성명"
               placeholder="홍길동"
               value={ownerName}
-              readOnly
-              className="bg-slate-100 text-slate-600 cursor-not-allowed"
+              onChange={(e) => setOwnerName(e.target.value)}
+              required
               icon={<User size={18} />}
             />
             <Input
               id="date"
               label="개업일자"
-              placeholder="YYYYMMDD"
+              placeholder="YYYYMMDD (예: 20240101)"
               value={openDate}
-              readOnly
-              className="bg-slate-100 text-slate-600 cursor-not-allowed"
+              onChange={(e) => setOpenDate(e.target.value)}
+              required
+              maxLength={8}
               icon={<FileText size={18} />}
             />
             <Input
@@ -310,8 +255,7 @@ export const BossSignupForm: React.FC<BossSignupFormProps> = ({ onCancel, onComp
               label="상호명 (선택)"
               placeholder="(주)공사로그"
               value={companyName}
-              readOnly
-              className="bg-slate-100 text-slate-600 cursor-not-allowed"
+              onChange={(e) => setCompanyName(e.target.value)}
               icon={<Building2 size={18} />}
             />
 

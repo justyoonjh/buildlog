@@ -1,6 +1,6 @@
 import React from 'react';
 import { useProjectLogic } from '@/features/project/hooks/useProjectLogic';
-import { ConsultationView } from './ConsultationView';
+import { ConsultationView } from '../ConsultationView';
 import { useNavigate } from 'react-router-dom';
 
 export const ConsultationPage: React.FC = () => {
